@@ -4,7 +4,6 @@ FROM python:3.7.17-slim
 
 WORKDIR /app
 
-RUN env | grep -i _PROXY
 # Install dependencies
 RUN pip install numpy pandas backtrader optunity backtrader_plotting tushare
 
