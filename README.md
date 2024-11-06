@@ -5,9 +5,9 @@ python -m backtester
 
 Docker启动
 
-docker compose -f docker-compose.yml up
+docker compose -f docker-compose.yml up-d
 
-docker exec -it backtester bash
+docker compose exec backtester bash
 
 python -m backtester
 
