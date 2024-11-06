@@ -3,9 +3,9 @@ FROM python:3.7.17-slim
 # Set working directory in container
 
 WORKDIR /app
-
+COPY requirements.txt /app/
 # Install dependencies
-RUN pip install numpy pandas backtrader optunity backtrader_plotting tushare
+RUN pip install -r requirements.txt
 
 # Copy all project files
 COPY ./backtester .
