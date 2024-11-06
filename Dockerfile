@@ -9,7 +9,7 @@ RUN env | grep -i _PROXY
 RUN pip install numpy pandas backtrader optunity backtrader_plotting tushare
 
 # Copy all project files
-COPY . .
+COPY ./backtester .
 
 # Command to run the script
-CMD ["python", "Bactrader_SystemV2.py"]
+CMD ["python", "-m", "backtester"]

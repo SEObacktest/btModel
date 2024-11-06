@@ -8,6 +8,7 @@ from backtrader_plotting import Bokeh  # 导入Bokeh模块，用于绘制回测�
 from backtrader_plotting.schemes import Tradimo  # 导入Bokeh的绘图方案
 import datetime  # 导入日期时间模块，用于处理时间
 import optunity  # 导入Optunity库，用于超参数优化
+from .input_manager import DataIO
 
 # =============== 数据获取与处理类 ==================
 class DataGet:
@@ -1060,6 +1061,7 @@ class MainController:
                 # 输入非法字符的情况
                 print("非法输入！请重试！！！")
                 continue
+        
 
 
 if __name__ == '__main__':
