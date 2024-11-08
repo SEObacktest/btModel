@@ -1,0 +1,18 @@
+##backtrader自带的Analyzers分析器
+AnnualReturn：年化收益率
+Calmar： 卡玛比率
+DrawDown：回撤
+TimeDrawDown： 指定时间粒度下的回撤
+GrossLeverage： 总杠杆
+PositionsValue： 持仓价值
+PyFolio： 生成数据兼容pyfolio
+LogReturnsRolling： 滚动log收益率
+PeriodStats： 给定时段下的基本统计信息
+Returns： 用对数法计算总、平均、复合、年化收益率
+SharpeRatio： 夏普比率
+SharpeRatio_A： 年化夏普比率
+SQN：系统质量数System Quality Number
+TimeReturn：不同时段的收益率
+TradeAnalyzer：交易统计信息，如获胜、失败次数等
+Transactions： 每笔交易的标的、价格、数量等信息
+VWR： variability weighted return，波动率加权的收益率
