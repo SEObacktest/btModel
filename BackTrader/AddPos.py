@@ -2,8 +2,10 @@ import backtrader as bt
 import Log_Func
 
 class addpos(bt.Strategy):
-    def rebalance_positions(self):
-        Log_Func.Log.log(self,f"Checking Position Now")
+
+
+    def rebalance_long_positions(self):
+        Log_Func.Log.log(self,f"Checking Long Position Now")
         current_value=self.broker.getvalue()
         Log_Func.Log.log(self,f"Total Value:{current_value:.2f}")
         held_assets=[data for data in self.datas if self.getposition(data).size>0]
@@ -15,8 +17,8 @@ class addpos(bt.Strategy):
                 target_pos_value=current_value*self.target_percent
                 target_pos=int(target_pos_value/current_price)
 
-                Log_Func.Log.log(self,f"{data._name}:Position Now:{position.size:.2f},Value Now:{current_pos_value:.2f}")
-                Log_Func.Log.log(self,f"{data._name}:Target Position:{target_pos:.2f},Target Value:{target_pos_value:.2f}")
+                Log_Func.Log.log(self,f"{data._name}:Long Position Now:{position.size:.2f},Value Now:{current_pos_value:.2f}")
+                Log_Func.Log.log(self,f"{data._name}:Target Long Position:{target_pos:.2f},Target Value:{target_pos_value:.2f}")
 
                 delta_size=target_pos-position.size
 
@@ -30,6 +32,35 @@ class addpos(bt.Strategy):
 
                 elif delta_size==0:
                     pass
+    def rebalance_short_positions(self):
+        Log_Func.Log.log(self,f"Checking Short Position Now")
+        current_value=self.broker.getvalue()
+        Log_Func.Log.log(self,f"Total Value:{current_value:.2f}")
+        held_assets=[data for data in self.datas if self.getposition(data).size<0]
+        for data in held_assets:
+            position=self.getposition(data)
+            if position.size!=0:
+                current_price=data.close[0]
+                current_pos_value=position.size*current_price
+                target_pos_value=current_value*self.target_percent*(-1)
+                target_pos=int(target_pos_value/current_price)
+
+                Log_Func.Log.log(self,f"{data._name}:Short Position Now:{position.size:.2f},Value Now:{current_pos_value:.2f}")
+                Log_Func.Log.log(self,f"{data._name}:Target Short Position:{target_pos:.2f},Target Value:{target_pos_value:.2f}")
+
+                delta_size=target_pos-position.size
+
+                if delta_size>0:
+                    Log_Func.Log.log(self,f"Rebalance Close Short:{data._name} for {delta_size:.2f}")
+                    self.buy(data=data,size=delta_size)
+                 
+                elif delta_size<0:
+                    Log_Func.Log.log(self,f"Rebalance Open Short:{data._name} for {delta_size:.2f}")
+                    self.sell(data=data,size=delta_size)
+
+                elif delta_size==0:
+                    pass
+
 
     def allocate_proceeds(self,proceeds,sold_data):
         held_assets=[data for data in self.datas if self.getposition(data).size>0 and data!=sold_data]

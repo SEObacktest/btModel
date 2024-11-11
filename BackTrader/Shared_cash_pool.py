@@ -2,6 +2,7 @@ import backtrader as bt
 from backtrader.indicators import *
 from datetime import time
 import AddPos
+import DataIO
 import BuyAndSell
 import Log_Func
 class Shared_cash_pool(bt.Strategy):
@@ -38,7 +39,7 @@ class Shared_cash_pool(bt.Strategy):
             self.num_of_codes[data]=0#持仓的总品类数初始化
             self.num_of_rest[data]=0#每天平仓后剩余的持仓品类数初始化
             self.sell_judge[data]=0
-
+            self.update_percent_judge=0
 
 
 
@@ -46,6 +47,9 @@ class Shared_cash_pool(bt.Strategy):
         """
         每个时间步执行共享资金池策略。
         """
+        if self.update_percent_judge==0:
+            DataIO.DataIO.change_target_percent(self)
+            self.update_percent_judge+=1
         self.shared_cash()  # 执行共享资金池策略
 
 
@@ -68,14 +72,14 @@ class Shared_cash_pool(bt.Strategy):
                     f"Cost:{order.executed.value:.2f},"
                     f"Commission:{order.executed.comm:.2f}"
                     )
-                elif order.issell():  # 卖出订单完成
+                elif order.issell() or order.isclose():  # 卖出订单完成
                     #net_proceeds=order.executed.value-order.executed.comm
                     #self.proceeds+=net_proceeds
                     Log_Func.Log.log(self,
                     f"SELL EXECUTED,{data._name},Size:{order.executed.size},"
                     f"Price:{order.executed.price:.2f},"
-                    #f"Cost:{order.executed.value:.2f},"
-                    f"Cost:{order.executed.size*order.executed.price}"
+                    f"Cost:{order.executed.value:.2f},"
+                    #f"Cost:{order.executed.size*order.executed.price}"
                     f"Commission:{order.executed.comm:.2f},"
                     #f"Net Proceeds:{net_proceeds:.2f}"
                     )
@@ -94,14 +98,18 @@ class Shared_cash_pool(bt.Strategy):
         """
         根据共享资金池策略的条件进行每个品种的买入或卖出。
         """
+        
         for data in self.datas:
             pos=self.getposition(data).size
             if pos==0:
                 size=self.calculate_quantity(data)
-                BuyAndSell.Buy_And_Sell_Strategy.buy_function(self,line=data,size=size)
+                #BuyAndSell.Buy_And_Sell_Strategy.buy_function(self,line=data,size=size)
+                BuyAndSell.Buy_And_Sell_Strategy.open_short_function(self,line=data,size=size)
             else:
-                BuyAndSell.Buy_And_Sell_Strategy.sell_function(self,line=data)
-        AddPos.addpos.rebalance_positions(self)
+                #BuyAndSell.Buy_And_Sell_Strategy.sell_function(self,line=data)
+                BuyAndSell.Buy_And_Sell_Strategy.close_short_function(self,line=data)
+        #AddPos.addpos.rebalance_long_positions(self)
+        AddPos.addpos.rebalance_short_positions(self)
 
     
     def calculate_quantity(self, line) -> int:
