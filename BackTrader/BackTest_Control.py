@@ -39,6 +39,7 @@ class BackTest:
         :param end_date: 回测结束日期
         """
         cerebro = bt.Cerebro()  # 创建Backtrader回测引擎
+        cerebro.broker.set_coc(True) 
         BackTestSetup.set_cerebro(cerebro=cerebro, opt_judge=False)  # 设置回测引擎
         cerebro.addstrategy(Shared_cash_pool)  # 添加策略（共享资金池策略）
         DataGet.get_data(cerebro=cerebro, codes=symbol_list, start_date=start_date, end_date=end_date)  # 获取数据

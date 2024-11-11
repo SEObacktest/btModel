@@ -7,7 +7,7 @@ from backtrader.analyzers import *
 import numpy as np
 
 
-class DataIO:
+class DataIO(bt.Strategy):
     """
     数据输入输出类，提供与用户交互的功能，包括获取股票代码、选择回测指标、设置参数优化等。
     """

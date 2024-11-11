@@ -16,10 +16,9 @@ class BackTestSetup:
         :param opt_judge: 是否进行参数优化的标志，True表示优化模式，不添加分析器和绘图元素
         """
         public_cash = 100000000  # 设置初始资金为一亿
-        commission = 0.00025      # 设置交易手续费率
-
+        #commission = 0.00025      # 设置交易手续费率
+        commission=0
         cerebro.broker.setcash(public_cash)  # 设置初始资金
-        cerebro.broker.set_coc(False)        # 设置是否在下一个bar执行订单，False表示在当前bar执行
         cerebro.broker.setcommission(commission=commission)  # 设置交易手续费
 
         if not opt_judge:

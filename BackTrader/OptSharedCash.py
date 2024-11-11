@@ -18,7 +18,7 @@ class OptSharedCash(bt.Strategy):
         self.bolling_top = dict()  # 布林带上轨
         self.bolling_bot = dict()  # 布林带下轨
         self.notify_flag = 0  # 控制是否打印订单通知
-
+        self.out_money=dict()
         # 遍历所有数据集，为每个数据集计算对应的指标
         for index, data in enumerate(self.datas):
             c = data.close
@@ -26,6 +26,7 @@ class OptSharedCash(bt.Strategy):
             self.sma5[data] = MovingAverageSimple(c, period=int(self.p.N1))  # 简单移动平均线，周期为N1
             self.ema15[data] = ExponentialMovingAverage(c, period=int(self.p.N2))  # 指数移动平均线，周期为N2
             self.ma30[data] = MovingAverage(c)  # 默认周期的移动平均线
+            self.out_money[data]=0
             # 初始化布林带指标
             self.bolling_top[data] = bt.indicators.BollingerBands(c, period=20).top  # 布林带上轨
             self.bolling_bot[data] = bt.indicators.BollingerBands(c, period=20).bot  # 布林带下轨
