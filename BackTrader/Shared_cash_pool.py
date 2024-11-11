@@ -1,7 +1,12 @@
 import backtrader as bt
 from backtrader.indicators import *
-from log import Log
+
 from datetime import time
+import AddPos
+import DataIO
+import BuyAndSell
+import Log_Func
+
 class Shared_cash_pool(bt.Strategy):
     """
     共享资金池策略类，主要用于管理多个品种的买卖决策，策略基于不同的技术指标。
@@ -27,8 +32,10 @@ class Shared_cash_pool(bt.Strategy):
         self.target_percent=0.05
         for index, data in enumerate(self.datas):
             c = data.close
-            self.sma5[data] = MovingAverageSimple(c)  # 初始化5日简单移动均线
-            self.ema15[data] = ExponentialMovingAverage(c)  # 初始化15日指数加权移动均线
+
+            self.sma5[data] = MovingAverageSimple(c,period=10)  # 初始化5日简单移动均线
+            self.ema15[data] = ExponentialMovingAverage(c,period=10)  # 初始化15日指数加权移动均线
+
             self.bolling_top[data] = bt.indicators.BollingerBands(c, period=20).top  # 初始化布林带上轨
             self.bolling_bot[data] = bt.indicators.BollingerBands(c, period=20).bot  # 初始化布林带下轨
             self.out_money[data]=0#平仓得到的钱初始化
@@ -37,21 +44,22 @@ class Shared_cash_pool(bt.Strategy):
             self.num_of_rest[data]=0#每天平仓后剩余的持仓品类数初始化
             self.sell_judge[data]=0
 
+            self.update_percent_judge=0
 
-    def log(self, txt, dt=None):
-        """ 日志记录函数 """
-        dt = dt or self.datas[0].datetime.date(0)
-        print(f'{dt.isoformat()} {txt}')
+
 
 
     def next(self):
         """
         每个时间步执行共享资金池策略。
         """
+
+        if self.update_percent_judge==0:
+            DataIO.DataIO.change_target_percent(self)
+            self.update_percent_judge+=1
         self.shared_cash()  # 执行共享资金池策略
-        #current_time=self.datas[0].datetime.time(0)
-        #if current_time.hour==self.checking_time.hour and current_time.minute==self.checking_time.minute:
-        #self.rebalance_positions()
+
+
 
     def notify_order(self, order):
         """
@@ -66,30 +74,35 @@ class Shared_cash_pool(bt.Strategy):
             if order.status in [order.Completed]:
                 data=order.data
                 if order.isbuy():  # 买入订单完成
-                    self.log(
+
+                    Log_Func.Log.log(self,
+
                     f"BUY EXECUTED,{data._name}, Size:{order.executed.size},"
                     f"Price:{order.executed.price:.2f},"
                     f"Cost:{order.executed.value:.2f},"
                     f"Commission:{order.executed.comm:.2f}"
                     )
-                elif order.issell():  # 卖出订单完成
-                    net_proceeds=order.executed.value-order.executed.comm
-                    self.proceeds+=net_proceeds
-                    self.log(
+
+                elif order.issell() or order.isclose():  # 卖出订单完成
+                    #net_proceeds=order.executed.value-order.executed.comm
+                    #self.proceeds+=net_proceeds
+                    Log_Func.Log.log(self,
                     f"SELL EXECUTED,{data._name},Size:{order.executed.size},"
                     f"Price:{order.executed.price:.2f},"
-                    f"Proceeds:{order.executed.value:.2f},"
+                    f"Cost:{order.executed.value:.2f},"
+                    #f"Cost:{order.executed.size*order.executed.price}"
                     f"Commission:{order.executed.comm:.2f},"
-                    f"Net Proceeds:{net_proceeds:.2f}"
+                    #f"Net Proceeds:{net_proceeds:.2f}"
                     )
                     #if self.getposition(data).size==0:
-                    self.allocate_proceeds(net_proceeds,sold_data=data)
+                    #self.allocate_proceeds(net_proceeds,sold_data=data)
             elif order.status is order.Canceled:
-                self.log('ORDER CANCELED')
+                Log_Func.Log.log(self,'ORDER CANCELED')
             elif order.status is order.Rejected:
-                self.log('ORDER REJECTED')
+                Log_Func.Log.log(self,'ORDER REJECTED')
             elif order.status is order.Margin:
-                self.log('ORDER MARGIN')
+                Log_Func.Log.log(self,'ORDER MARGIN')
+
         else:
             pass
 
@@ -97,93 +110,22 @@ class Shared_cash_pool(bt.Strategy):
         """
         根据共享资金池策略的条件进行每个品种的买入或卖出。
         """
+        
+
         for data in self.datas:
             pos=self.getposition(data).size
             if pos==0:
                 size=self.calculate_quantity(data)
-                self.buy_function(line=data,size=size)
+
+                #BuyAndSell.Buy_And_Sell_Strategy.buy_function(self,line=data,size=size)
+                BuyAndSell.Buy_And_Sell_Strategy.open_short_function(self,line=data,size=size)
             else:
-                self.sell_function(line=data)
-        self.rebalance_positions()
+                #BuyAndSell.Buy_And_Sell_Strategy.sell_function(self,line=data)
+                BuyAndSell.Buy_And_Sell_Strategy.close_short_function(self,line=data)
+        #AddPos.addpos.rebalance_long_positions(self)
+        AddPos.addpos.rebalance_short_positions(self)
 
-    def buy_function(self, line, size):
-        """
-        执行买入操作，当满足买入条件时，调用Backtrader的买入函数。
-        """
-        close_over_sma = line.close > self.sma5[line][0]  # 当前价格高于5日均线
-        close_over_ema = line.close > self.ema15[line][0]  # 当前价格高于15日指数均线
-        sma_ema_diff = self.sma5[line][0] - self.ema15[line][0]  # 计算5日均线与15日均线的差值
-        buy_cond = (close_over_sma and close_over_ema and sma_ema_diff > 0) or line.close == self.bolling_top[line][0]  # 满足买入条件
-
-        if buy_cond and self.broker.getcash() > 0:  # 确保资金充足
-            self.log(f'BUY CREATE, {line._name}, Size: {size}, Price: {line.close[0]:.2f}')
-            self.buy(data=line,size=size)
-        else:
-            pass
-
-    def sell_function(self, line):
-        """
-        执行卖出操作，当满足卖出条件时，调用Backtrader的卖出函数。
-        """
     
-        sell_cond = line.close < self.sma5[line]  # 当前价格低于5日均线
-
-        if sell_cond and self.getposition(line).size>0:  # 当前持有仓位时执行卖出
-            pos=self.getposition(line).size
-            self.log(f'SELL CREATE,{line._name},Size:{pos},Price:{line.close[0]:.2f}')
-            self.sell(data=line,size=pos)
-
-    def allocate_proceeds(self,proceeds,sold_data):
-        held_assets=[data for data in self.datas if self.getposition(data).size>0 and data!=sold_data]
-        num_held=len(held_assets)
-
-        if num_held==0:
-            self.log("No assets held to allocate proceeds.")
-            return
-        
-        allocation_per_asset=proceeds/num_held
-
-        self.log(f"Allocating {allocation_per_asset:.2f} to each of {num_held} held assets.")
-
-        for data in held_assets:
-            size=int(allocation_per_asset/data.close[0])
-            if size>0:
-                self.log(f"ALLOCATE BUY,{data._name},Size:{size},Price:{data.close[0]:.2f}")
-                self.buy(data=data,size=size)
-                self.log("The Buying Above is Rebuy.")
-            else:
-                self.log(f'Insufficient allocation for {data._name},Allocation:{allocation_per_asset:.2f},Price:{data.close[0]:.2f}')
-
-    def rebalance_positions(self):
-        self.log(f"Checking Position Now")
-        current_cash=self.broker.getcash()
-        current_value=self.broker.getvalue()
-        self.log(f"Total Value:{current_value:.2f}")
-        held_assets=[data for data in self.datas if self.getposition(data).size>0]
-        for data in held_assets:
-            position=self.getposition(data)
-            if position.size!=0:
-                current_price=data.close[0]
-                current_pos_value=position.size*current_price
-                target_pos_value=current_value*self.target_percent
-                target_pos=int(target_pos_value/current_price)
-
-                self.log(f"{data._name}:Position Now:{position.size:.2f},Value Now:{current_pos_value:.2f}")
-                self.log(f"{data._name}:Target Position:{target_pos:.2f},Target Value:{target_pos_value:.2f}")
-
-                delta_size=target_pos-position.size
-
-                if delta_size>0:
-                    self.log(f"Rebalance Buy In:{data._name} for {delta_size:.2f}")
-                    self.buy(data=data,size=delta_size)
-                 
-                elif delta_size<0:
-                    self.log(f"Rebalance Sold:{data._name} for {delta_size:.2f}")
-                    self.sell(data=data,size=delta_size)
-
-                elif delta_size==0:
-                    pass
-
 
     def calculate_quantity(self, line) -> int:
         """
@@ -195,7 +137,9 @@ class Shared_cash_pool(bt.Strategy):
         return quantity
     
     def stop(self):
-        self.log(f'Total Proceeds from Sell Orders:{self.proceeds:.2f}')
+
+        Log_Func.Log.log(self,f'Total Proceeds from Sell Orders:{self.proceeds:.2f}')
+
 
     def print_position(self, line) -> None:
         """

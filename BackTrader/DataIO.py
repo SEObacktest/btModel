@@ -5,7 +5,11 @@ import backtrader as bt
 from backtrader.indicators import *
 from backtrader.analyzers import *
 import numpy as np
+<<<<<<< HEAD
 
+=======
+import Log_Func
+>>>>>>> zy_dev
 
 class DataIO(bt.Strategy):
     """
@@ -320,3 +324,38 @@ class DataIO(bt.Strategy):
         print(f'采用{name}算法优化后的参数信息:')
         print('N1 = %.2f' % optimal_pars['N1'])
         print('N2 = %.2f' % optimal_pars['N2'])
+<<<<<<< HEAD
+=======
+
+
+    params = (
+        ('target_percent', 0.05),  # 默认值为 5%
+    )
+    def __init__(self):
+        self.target_percent=self.params.target_percent
+
+    def change_target_percent(self):
+        Log_Func.Log.log(self,f"Current Target percentage is {self.target_percent}.")
+        change_flag = input("是否需要调整持仓比例(y/n): ").strip().lower()
+        if change_flag=='y':
+            DataIO.set_target_percent(self)
+
+    def set_target_percent(self):
+        """
+        接收用户输入的目标持仓比例
+        """
+        while True:
+            try:
+                new_target_percent = float(input("Enter the new target percentage(or 'q' to exit): "))
+                if new_target_percent == 'q':
+                    break
+                elif 0 <= new_target_percent <= 1:
+                    self.target_percent = new_target_percent
+                    Log_Func.Log.log(self,f"Target percentage updated to {new_target_percent:.2f}")
+                    break
+                else:
+                    Log_Func.Log.log(self,"Target percentage must be between 0 and 1.")
+            except ValueError:
+                Log_Func.Log.log("Invalid input. Please enter a valid number.")
+
+>>>>>>> zy_dev

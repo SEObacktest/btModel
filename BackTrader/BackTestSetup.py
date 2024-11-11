@@ -16,8 +16,13 @@ class BackTestSetup:
         :param opt_judge: 是否进行参数优化的标志，True表示优化模式，不添加分析器和绘图元素
         """
         public_cash = 100000000  # 设置初始资金为一亿
+<<<<<<< HEAD
         commission = 0.00025      # 设置交易手续费率
 
+=======
+        #commission = 0.00025      # 设置交易手续费率
+        commission=0
+>>>>>>> zy_dev
         cerebro.broker.setcash(public_cash)  # 设置初始资金
         cerebro.broker.setcommission(commission=commission)  # 设置交易手续费
 
