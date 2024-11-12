@@ -32,6 +32,8 @@ class addpos(bt.Strategy):
 
                 elif delta_size==0:
                     pass
+
+                
     def rebalance_short_positions(self):
         Log_Func.Log.log(self,f"Checking Short Position Now")
         current_value=self.broker.getvalue()

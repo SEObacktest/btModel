@@ -30,6 +30,10 @@ class Shared_cash_pool(bt.Strategy):
         self.pending_allocation=0
         self.checking_time=time(14,50)
         self.target_percent=0.05
+        self.ema12=dict()
+        self.ema26=dict()
+        self.diff=dict()
+        self.dea=dict()
         for index, data in enumerate(self.datas):
             c = data.close
 
@@ -45,6 +49,11 @@ class Shared_cash_pool(bt.Strategy):
             self.sell_judge[data]=0
 
             self.update_percent_judge=0
+            self.ema12[data]=ExponentialMovingAverage(c,period=12)
+            self.ema26[data]=ExponentialMovingAverage(c,period=26)
+            self.diff[data]=self.ema12[data]-self.ema26[data]
+            self.dea[data]=ExponentialMovingAverage(self.diff[data],period=9)
+
 
 
 
@@ -114,15 +123,17 @@ class Shared_cash_pool(bt.Strategy):
 
         for data in self.datas:
             pos=self.getposition(data).size
-            if pos==0:
+            if pos<=0:
                 size=self.calculate_quantity(data)
 
-                #BuyAndSell.Buy_And_Sell_Strategy.buy_function(self,line=data,size=size)
-                BuyAndSell.Buy_And_Sell_Strategy.open_short_function(self,line=data,size=size)
+                BuyAndSell.Buy_And_Sell_Strategy.buy_function(self,line=data,size=size)
+                #BuyAndSell.Buy_And_Sell_Strategy.open_short_function(self,line=data,size=size)
+
             else:
-                #BuyAndSell.Buy_And_Sell_Strategy.sell_function(self,line=data)
-                BuyAndSell.Buy_And_Sell_Strategy.close_short_function(self,line=data)
-        #AddPos.addpos.rebalance_long_positions(self)
+                size=self.calculate_quantity(data)
+                BuyAndSell.Buy_And_Sell_Strategy.sell_function(self,line=data,size=size)
+                #BuyAndSell.Buy_And_Sell_Strategy.close_short_function(self,line=data)
+        AddPos.addpos.rebalance_long_positions(self)
         AddPos.addpos.rebalance_short_positions(self)
 
     
