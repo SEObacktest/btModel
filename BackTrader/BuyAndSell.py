@@ -2,7 +2,7 @@ import backtrader as bt
 import Log_Func
 class Buy_And_Sell_Strategy(bt.Strategy):
 
-    def buy_function(self, line, size):
+    '''def buy_function(self, line, size):
         """
         执行买入操作，当满足买入条件时，调用Backtrader的买入函数。
         """
@@ -15,9 +15,39 @@ class Buy_And_Sell_Strategy(bt.Strategy):
             Log_Func.Log.log(self,f'BUY CREATE, {line._name}, Size: {size}, Price: {line.close[0]:.2f}')
             self.buy(data=line,size=size)
         else:
+            pass'''
+    
+    def buy_function(self,line,size):
+        bpk1=(self.diff[line][-1]<=self.dea[line][-1])
+        bpk2=(self.diff[line][0]>self.dea[line][0])
+        if(bpk1 and bpk2):
+            pos=self.getposition(line).size
+            if pos==0 and self.broker.getcash()>0:
+                Log_Func.Log.log(self,f'BUY CREATE, {line._name}, Size: {size}, Price: {line.close[0]:.2f}')
+                self.buy(data=line,size=size)
+            elif pos<0 and self.broker.getcash()>0:
+                Log_Func.Log.log(self,f'CLOSE SHORT CREATE, {line._name}, Size: {pos}, Price: {line.close[0]:.2f}')
+                self.close(data=line)
+                Log_Func.Log.log(self,f'BUY CREATE, {line._name}, Size: {size}, Price: {line.close[0]:.2f}')
+                self.buy(data=line,size=size)
+        else:
             pass
+    
+    def sell_function(self,line,size):
+        spk1=(self.diff[line][-1]>self.dea[line][-1])
+        spk2=(self.diff[line][0]<=self.dea[line][0])
+        if (spk1 and spk2):
+            pos=self.getposition(line).size
+            if pos==0 and self.broker.getcash()>0:
+                Log_Func.Log.log(self,f'OPEN SHORT CREATE, {line._name}, Size: {size}, Price: {line.close[0]:.2f}')
+                self.sell(data=line, size=size)
+            elif pos>0 and self.broker.getcash()>0:
+                Log_Func.Log.log(self,f'SELL CREATE,{line._name},Size:{pos},Price:{line.close[0]:.2f}')
+                self.close(data=line)
+                Log_Func.Log.log(self,f'OPEN SHORT CREATE, {line._name}, Size: {size}, Price: {line.close[0]:.2f}')
+                self.sell(data=line, size=size)
 
-    def sell_function(self, line):
+    '''def sell_function(self, line):
         """
         执行卖出操作，当满足卖出条件时，调用Backtrader的卖出函数。
         """
@@ -27,7 +57,7 @@ class Buy_And_Sell_Strategy(bt.Strategy):
         if sell_cond and self.getposition(line).size>0:  # 当前持有仓位时执行卖出
             pos=self.getposition(line).size
             Log_Func.Log.log(self,f'SELL CREATE,{line._name},Size:{pos},Price:{line.close[0]:.2f}')
-            self.close(data=line)
+            self.close(data=line)'''
 
 
     def open_short_function(self, line, size):
