@@ -28,6 +28,10 @@ class Shared_cash_pool(bt.Strategy):
         self.pending_allocation=0
         self.checking_time=time(14,50)
         self.target_percent=0.05
+        self.ema12=dict()
+        self.ema26=dict()
+        self.diff=dict()
+        self.dea=dict()
         for index, data in enumerate(self.datas):
             c = data.close
             self.sma5[data] = MovingAverageSimple(c,period=10)  # 初始化5日简单移动均线
@@ -40,6 +44,11 @@ class Shared_cash_pool(bt.Strategy):
             self.num_of_rest[data]=0#每天平仓后剩余的持仓品类数初始化
             self.sell_judge[data]=0
             self.update_percent_judge=0
+            self.ema12[data]=ExponentialMovingAverage(c,period=12)
+            self.ema26[data]=ExponentialMovingAverage(c,period=26)
+            self.diff[data]=self.ema12[data]-self.ema26[data]
+            self.dea[data]=ExponentialMovingAverage(self.diff[data],period=9)
+
 
 
 
@@ -94,24 +103,48 @@ class Shared_cash_pool(bt.Strategy):
         else:
             pass
 
+    # def shared_cash(self):
+    #     """
+    #     根据共享资金池策略的条件进行每个品种的买入或卖出。
+    #     """
+    #
+    #     for data in self.datas:
+    #         pos=self.getposition(data).size  # 获取当前持仓数量
+    #         if pos<=0:
+    #             size=self.calculate_quantity(data)
+    #             BuyAndSell.Buy_And_Sell_Strategy.buy_function(self,line=data,size=size)
+    #             #BuyAndSell.Buy_And_Sell_Strategy.open_short_function(self,line=data,size=size)
+    #         else:
+    #             size=self.calculate_quantity(data)
+    #             BuyAndSell.Buy_And_Sell_Strategy.sell_function(self,line=data,size=size)
+    #             #BuyAndSell.Buy_And_Sell_Strategy.close_short_function(self,line=data)
+    #     AddPos.addpos.rebalance_long_positions(self)
+    #     AddPos.addpos.rebalance_short_positions(self)
+
     def shared_cash(self):
         """
         根据共享资金池策略的条件进行每个品种的买入或卖出。
         """
-        
         for data in self.datas:
-            pos=self.getposition(data).size
-            if pos==0:
-                size=self.calculate_quantity(data)
-                #BuyAndSell.Buy_And_Sell_Strategy.buy_function(self,line=data,size=size)
-                BuyAndSell.Buy_And_Sell_Strategy.open_short_function(self,line=data,size=size)
-            else:
-                #BuyAndSell.Buy_And_Sell_Strategy.sell_function(self,line=data)
-                BuyAndSell.Buy_And_Sell_Strategy.close_short_function(self,line=data)
-        #AddPos.addpos.rebalance_long_positions(self)
+            pos = self.getposition(data).size  # 获取当前持仓数量
+            size = self.calculate_quantity(data)
+            if pos == 0:
+                # 当没有持仓时，根据策略开多头或开空头
+                BuyAndSell.Buy_And_Sell_Strategy.buy_function(self, line=data, size=size)
+                BuyAndSell.Buy_And_Sell_Strategy.open_short_function(self, line=data, size=size)
+
+            elif pos > 0:
+                # 持有多头，先平多再开空头
+                BuyAndSell.Buy_And_Sell_Strategy.sell_function(self, line=data, size=size)
+
+            elif pos < 0:
+                # 持有空头,平空并买入
+                BuyAndSell.Buy_And_Sell_Strategy.close_short_function(self, line=data)
+
+        # 重新平衡多头和空头的仓位
+        AddPos.addpos.rebalance_long_positions(self)
         AddPos.addpos.rebalance_short_positions(self)
 
-    
     def calculate_quantity(self, line) -> int:
         """
         根据可用资金计算每次交易的数量。
