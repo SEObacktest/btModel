@@ -7,23 +7,26 @@ import io
 import sys
 from datetime import datetime
 import backtrader as bt
-config_logging(logging, logging.DEBUG)
+from backtrader.feeds import GenericCSVData
+import pandas as pd
 um_futures_client = UMFutures()
 BTCUSDT=um_futures_client.klines("BTCUSDT",'1d')
-buffer=io.StringIO()
-csv_writer=csv.writer(buffer)
-csv_writer.writerow(["Date", "Open", "High", "Low", "Close"])
-for item in BTCUSDT:
-    item[0]=datetime.fromtimestamp(item[0]/1000)
-    csv_writer.writerow(item)
-content=buffer.getvalue()
-buffer.close()
-print(content)
+datetime_arr,open,close,high,low,volume=zip(*[
+    (item[0],item[1],item[2],item[3],item[4],item[5])
+    for item in BTCUSDT
+])
+datetime_arr=[datetime.fromtimestamp(item/1000).strftime('%Y-%m-%d') for item in datetime_arr]
+d={"open":open,"close":close,"high":high,"low":low,"volume":volume}
+df=pd.DataFrame(data=d,index=datetime_arr)
 cerebro=bt.Cerebro()
-cerebro.adddata(content)
-cerebro.run()
 
-print(sys.getsizeof(buffer))
+print(df)
+
+
+
+
+
+
 
 '''
 import logging
