@@ -1,6 +1,7 @@
 from DataIO import DataIO
 from BackTest_Control import BackTest
 import StrategyOptimization
+from StrategyOptimization import StrategyOptimization
 class MainController:
     @staticmethod
     def start():
@@ -9,7 +10,7 @@ class MainController:
         """
         while True:
             print("*************************************************************************************")
-            choose = input("请选择功能：\n1.批量独立资金池回测\n2.共享资金池回测\n3.策略参数优化\n(输入：“*”退出系统)\n")
+            choose = input("请选择功能：\n1.批量独立资金池回测\n2.共享资金池回测\n3.共享资金池打分回测\n4.策略参数优化\n(输入：“*”退出系统)\n")
 
             if choose == "1":
                 # 获取用户输入的股票代码、起始日期和结束日期
@@ -20,10 +21,16 @@ class MainController:
             elif choose == "2":
                 # 获取用户输入的股票代码、起始日期和结束日期
                 codes, start_date, end_date = DataIO.input_stockInformation()
-                # 执行共享资金池回测
+                # 执行共享资金池打分回测
                 BackTest.shared_cash_test(symbol_list=codes, start_date=start_date, end_date=end_date)
                 continue
             elif choose == "3":
+                # 获取用户输入的股票代码、起始日期和结束日期
+                codes, start_date, end_date = DataIO.input_stockInformation()
+                # 执行共享资金池回测
+                BackTest.shared_cash_pointing_test(symbol_list=codes, start_date=start_date, end_date=end_date)
+                continue
+            elif choose == "4":
                 # 获取用户输入的股票代码、起始日期和结束日期
                 codes, start_date, end_date = DataIO.input_stockInformation()
                 # 执行策略参数优化流程
