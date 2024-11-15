@@ -1,5 +1,8 @@
 import backtrader as bt
 import Log_Func
+import pandas as pd
+import Shared_cash_pool
+import AddPos
 class Buy_And_Sell_Strategy(bt.Strategy):
 
     '''def buy_function(self, line, size):
@@ -90,3 +93,49 @@ class Buy_And_Sell_Strategy(bt.Strategy):
             self.close(data=line)
         else:
             pass
+
+    def grading_open_long_function(self,rank):
+        top_stocks=rank.nlargest(1,'Score')
+        for stock in top_stocks['Stock']:
+            best_data=None
+            for  data in self.datas:
+                if data._name==stock:
+                    best_data=data
+                    break
+            
+            if best_data:
+                size=Shared_cash_pool.Shared_cash_pool.calculate_quantity(self,best_data)
+                pos=self.getposition(best_data).size
+                if pos==0:
+                    Log_Func.Log.log(self,f'OPEH LONG CREATE, {best_data._name}, Size: {size}, Price: {best_data.close[0]:.2f}')
+                    self.buy(data=best_data,size=size)
+                elif pos<0:
+                    Log_Func.Log.log(self,f'CLOSE SHORT CREATE, {best_data._name}, Size: {pos}, Price: {best_data.close[0]:.2f}')
+                    self.close(data=best_data)
+                    Log_Func.Log.log(self,f'OPEN LONG CREATE, {best_data._name}, Size: {size}, Price: {best_data.close[0]:.2f}')
+                    self.buy(data=best_data,size=size)
+                elif pos>0:    
+                    pass
+
+
+    def grading_open_short_function(self, rank):
+        bot_stocks=rank.nsmallest(1,'Score')
+        for stock in bot_stocks['Stock']:
+            worst_data=None
+            for  data in self.datas:
+                if data._name==stock:
+                    worst_data=data
+                    break
+            if worst_data:
+                size=Shared_cash_pool.Shared_cash_pool.calculate_quantity(self,worst_data)
+                pos=self.getposition(worst_data).size
+                if pos==0:
+                    Log_Func.Log.log(self,f'OPEN SHORT CREATE, {worst_data._name}, Size: {size}, Price: {worst_data.close[0]:.2f}')
+                    self.sell(data=worst_data,size=size)
+                elif pos>0:
+                    Log_Func.Log.log(self,f'CLOSE LONG CREATE, {worst_data._name}, Size: {pos}, Price: {worst_data.close[0]:.2f}')
+                    self.close(data=worst_data)
+                    Log_Func.Log.log(self,f'OPEN SHORT CREATE, {worst_data._name}, Size: {size}, Price: {worst_data.close[0]:.2f}')
+                    self.sell(data=worst_data,size=size)
+                elif pos<0:    
+                    AddPos.addpos.rebalance_short_positions(self,specific_assets=worst_data)

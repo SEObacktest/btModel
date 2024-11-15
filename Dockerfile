@@ -3,13 +3,13 @@ FROM python:3.7.17-slim
 # Set working directory in container
 
 WORKDIR /app
-
-RUN env | grep -i _PROXY
+COPY requirements.txt /app/
 # Install dependencies
-RUN pip install numpy pandas backtrader optunity backtrader_plotting tushare
+RUN pip install -r requirements.txt
 
 # Copy all project files
-COPY . .
+COPY ./BackTrader .
 
 # Command to run the script
-CMD ["python", "Bactrader_SystemV2.py"]
+
+CMD ["python",  "./BackTrader/main.py"]
