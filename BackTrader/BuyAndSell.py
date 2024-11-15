@@ -94,12 +94,13 @@ class Buy_And_Sell_Strategy(bt.Strategy):
         else:
             pass
 
+
     # def grading_open_long_function(self,rank):
-    def grading_top_function(self, rank):
+    def grading_top_function(self, top_stocks):
         '''
         处理打分后排名高的品种
         '''
-        top_stocks=rank.nlargest(1,'Score')
+        # top_stocks=rank.nlargest(1,'Score')
         for stock in top_stocks['Stock']:
             best_data=None
             for  data in self.datas:
@@ -119,16 +120,15 @@ class Buy_And_Sell_Strategy(bt.Strategy):
                     Log_Func.Log.log(self,f'OPEN LONG CREATE, {best_data._name}, Size: {size}, Price: {best_data.close[0]:.2f}')
                     self.buy(data=best_data,size=size)
                 elif pos>0: # 持有多头→check
-                    pass
+                    AddPos.addpos.rebalance_long_positions(self,specific_assets=best_data)
 
 
     # def grading_open_short_function(self, rank):
-    def grading_worst_function(self, rank):
-        '''
-        处理打分后排名低的品种
-        '''
-        bot_stocks=rank.nsmallest(1,'Score')
-        for stock in bot_stocks['Stock']:
+    def grading_worst_function(self, worst_stocks):
+        """ 处理打分后排名低的品种 """
+        # bot_stocks=rank.nsmallest(1,'Score')
+        # 遍历得分最低的股票
+        for stock in worst_stocks['Stock']:
             worst_data=None
             for  data in self.datas:
                 if data._name==stock:
@@ -148,9 +148,29 @@ class Buy_And_Sell_Strategy(bt.Strategy):
                 elif pos<0:  # 持有空头→check
                     AddPos.addpos.rebalance_short_positions(self,specific_assets=worst_data)
 
-    def grading_middle_function(self, rank):
-        '''处理打分后排名中间的品种'''
-        # 如果原来持有
-        # 持有空头 → 平空
-        # 持有多头 → 平多
-        # 如果没有 → pass
+    def grading_middle_function(self, middle_stocks):
+        """处理打分后排名中间的品种"""
+
+        # 遍历股票名称
+        for stock in middle_stocks['Stock']:
+            middle_data=None
+            for  data in self.datas:
+                if data._name==stock:
+                    middle_data=data
+                    break
+            # 如果原来持有
+            size = Shared_cash_pool.Shared_cash_pool.calculate_quantity(self, middle_data)
+            pos = self.getposition(middle_data).size
+            # 持有空头 → 平空
+            if pos <0:
+                Log_Func.Log.log(self,
+                                 f'CLOSE SHORT CREATE, {middle_data._name}, Size: {size}, Price: {middle_data.close[0]:.2f}')
+                self.close(data=middle_data)
+            # 持有多头 → 平多
+            elif pos > 0:
+                Log_Func.Log.log(self,
+                                 f'CLOSE LONG CREATE, {middle_data._name}, Size: {size}, Price: {middle_data.close[0]:.2f}')
+                self.close(data=middle_data)
+            # 如果没有 → pass
+            elif pos == 0:
+                pass
