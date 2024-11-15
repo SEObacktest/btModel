@@ -94,7 +94,11 @@ class Buy_And_Sell_Strategy(bt.Strategy):
         else:
             pass
 
-    def grading_open_long_function(self,rank):
+    # def grading_open_long_function(self,rank):
+    def grading_top_function(self, rank):
+        '''
+        处理打分后排名高的品种
+        '''
         top_stocks=rank.nlargest(1,'Score')
         for stock in top_stocks['Stock']:
             best_data=None
@@ -106,19 +110,23 @@ class Buy_And_Sell_Strategy(bt.Strategy):
             if best_data:
                 size=Shared_cash_pool.Shared_cash_pool.calculate_quantity(self,best_data)
                 pos=self.getposition(best_data).size
-                if pos==0:
+                if pos==0:  #  没有持仓→开空
                     Log_Func.Log.log(self,f'OPEH LONG CREATE, {best_data._name}, Size: {size}, Price: {best_data.close[0]:.2f}')
                     self.buy(data=best_data,size=size)
-                elif pos<0:
+                elif pos<0:  # 持有空头→平空→开多
                     Log_Func.Log.log(self,f'CLOSE SHORT CREATE, {best_data._name}, Size: {pos}, Price: {best_data.close[0]:.2f}')
                     self.close(data=best_data)
                     Log_Func.Log.log(self,f'OPEN LONG CREATE, {best_data._name}, Size: {size}, Price: {best_data.close[0]:.2f}')
                     self.buy(data=best_data,size=size)
-                elif pos>0:    
+                elif pos>0: # 持有多头→check
                     pass
 
 
-    def grading_open_short_function(self, rank):
+    # def grading_open_short_function(self, rank):
+    def grading_worst_function(self, rank):
+        '''
+        处理打分后排名低的品种
+        '''
         bot_stocks=rank.nsmallest(1,'Score')
         for stock in bot_stocks['Stock']:
             worst_data=None
@@ -129,13 +137,20 @@ class Buy_And_Sell_Strategy(bt.Strategy):
             if worst_data:
                 size=Shared_cash_pool.Shared_cash_pool.calculate_quantity(self,worst_data)
                 pos=self.getposition(worst_data).size
-                if pos==0:
+                if pos==0:  # 没有持仓→开空头
                     Log_Func.Log.log(self,f'OPEN SHORT CREATE, {worst_data._name}, Size: {size}, Price: {worst_data.close[0]:.2f}')
                     self.sell(data=worst_data,size=size)
-                elif pos>0:
+                elif pos>0:  # 持有多头→平多→开空头
                     Log_Func.Log.log(self,f'CLOSE LONG CREATE, {worst_data._name}, Size: {pos}, Price: {worst_data.close[0]:.2f}')
                     self.close(data=worst_data)
                     Log_Func.Log.log(self,f'OPEN SHORT CREATE, {worst_data._name}, Size: {size}, Price: {worst_data.close[0]:.2f}')
                     self.sell(data=worst_data,size=size)
-                elif pos<0:    
+                elif pos<0:  # 持有空头→check
                     AddPos.addpos.rebalance_short_positions(self,specific_assets=worst_data)
+
+    def grading_middle_function(self, rank):
+        '''处理打分后排名中间的品种'''
+        # 如果原来持有
+        # 持有空头 → 平空
+        # 持有多头 → 平多
+        # 如果没有 → pass
