@@ -1,9 +1,8 @@
-import backtrader as bt
 from backtrader.indicators import *
-import log_func
+from BackTrader.tools import log_func
 import pandas as pd
-import shared_cash_pool
-import buy_and_sell
+from BackTrader.strategies import buy_and_sell
+
 
 class Shared_Cash_Pool_Pointing(bt.Strategy):
     def __init__(self):
@@ -50,7 +49,7 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
                     f"Price:{order.executed.price:.2f},"
                     f"Cost:{order.executed.value:.2f},"
                     f"Commission:{order.executed.comm:.2f}"
-                    )
+                                     )
                 
                 elif order.issell():
                     log_func.Log.log(self,
@@ -58,7 +57,7 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
                     f"Price:{order.executed.price:.2f},"
                     f"Cost:{order.executed.value:.2f},"
                     f"Commission:{order.executed.comm:.2f}"
-                    )
+                                     )
 
                 elif order.isclose():
                     log_func.Log.log(self,
@@ -66,7 +65,7 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
                     f"Price:{order.executed.price:.2f},"
                     f"Cost:{order.executed.value:.2f},"
                     f"Commission:{order.executed.comm:.2f}"
-                    )
+                                     )
 
 
 
@@ -91,10 +90,11 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
         top_stocks = scores_df.nlargest(1, 'Score')
         bot_stocks = scores_df.nsmallest(1, 'Score')
         middle_stocks = scores_df[~scores_df['Stock'].isin(top_stocks['Stock']) & ~scores_df['Stock'].isin(bot_stocks['Stock'])]
-        buy_and_sell.BuyAndSellStrategy.grading_open_long_function(self,top_stocks)
-        buy_and_sell.BuyAndSellStrategy.grading_open_short_function(self,bot_stocks)
+        buy_and_sell.BuyAndSellStrategy.grading_open_long_function(self, top_stocks)
+        buy_and_sell.BuyAndSellStrategy.grading_open_short_function(self, bot_stocks)
         # 存在分数一样，没有排在中间的股票的情况，程序将无法执行，待完善
-        buy_and_sell.BuyAndSellStrategy.grading_middle_function((self, middle_stocks))
+        if middle_stocks:
+            buy_and_sell.BuyAndSellStrategy.grading_middle_function((self, middle_stocks))
 
 
 

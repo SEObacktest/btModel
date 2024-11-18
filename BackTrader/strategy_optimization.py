@@ -1,8 +1,8 @@
 import backtrader as bt
-from data_get import DataGet
-from data_io import DataIO
-from opt_solo_cash import OptSoloCash
-from opt_shared_cash import OptSharedCash
+from BackTrader.tools.data_get import DataGet
+from BackTrader.tools.data_io import DataIO
+from BackTrader.strategies.opt_solo_cash import OptSoloCash
+from BackTrader.strategies.opt_shared_cash import OptSharedCash
 import optunity
 from backtest_control import BackTestSetup
 

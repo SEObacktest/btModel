@@ -1,5 +1,5 @@
 import backtrader as bt
-from log_func import Log
+from BackTrader.tools.log_func import Log
 
 class AddPos(bt.Strategy):
 

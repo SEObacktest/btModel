@@ -1,4 +1,4 @@
-from data_io import DataIO
+from BackTrader.tools.data_io import DataIO
 from backtest_control import BackTest
 import strategy_optimization
 class MainController:
