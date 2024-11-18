@@ -94,7 +94,8 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
         buy_and_sell.BuyAndSellStrategy.grading_open_long_function(self,top_stocks)
         buy_and_sell.BuyAndSellStrategy.grading_open_short_function(self,bot_stocks)
         # 存在分数一样，没有排在中间的股票的情况，程序将无法执行，待完善
-        buy_and_sell.BuyAndSellStrategy.grading_middle_function((self, middle_stocks))
+        if middle_stocks:
+            buy_and_sell.BuyAndSellStrategy.grading_middle_function((self, middle_stocks))
 
 
 
