@@ -1,6 +1,6 @@
-from BackTrader.tools.data_io import DataIO
+from tools.data_io import DataIO
 from backtest_control import BackTest
-import strategy_optimization
+from strategy_optimization import StrategyOptimization
 class MainController:
     @staticmethod
     def start():
@@ -33,7 +33,7 @@ class MainController:
                 # 获取用户输入的股票代码、起始日期和结束日期
                 codes, start_date, end_date = DataIO.input_stockInformation()
                 # 执行策略参数优化流程
-                strategy_optimization.strategy_optimization_flow(symbol_list=codes, start_date=start_date,
+                StrategyOptimization.strategy_optimization_flow(symbol_list=codes, start_date=start_date,
                                                                 end_date=end_date)
                 continue
             elif choose == "*":

@@ -1,4 +1,4 @@
-from data_get import DataGet
+from .data_get import DataGet
 import pandas as pd
 import datetime
 from backtrader.analyzers import *
@@ -6,7 +6,7 @@ import numpy as np
 import tools.log_func as log
 
 
-class DataIO(bt.Strategy):
+class DataIO():
     """
     数据输入输出类，提供与用户交互的功能，包括获取股票代码、选择回测指标、设置参数优化等。
     """
@@ -40,7 +40,7 @@ class DataIO(bt.Strategy):
         pd.set_option('display.max_columns', None)
         pd.set_option('display.max_rows', None)
         # 读取之前保存的股票代码CSV文件
-        data = pd.read_csv("../datasets/codes.csv", index_col=0)
+        data = pd.read_csv("datasets/codes.csv", index_col=0)
         # 重命名列名为中文
         new_col = ['code', '股票名', '地区', '行业', '上市日期']
         data.columns = new_col

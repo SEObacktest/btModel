@@ -1,7 +1,7 @@
 import backtrader as bt
-from BackTrader.tools import log_func
+from tools import log_func
 import shared_cash_pool
-import add_pos
+from add_pos import AddPos
 class BuyAndSellStrategy(bt.Strategy):
 
     '''def buy_function(self, line, size):
@@ -134,7 +134,7 @@ class BuyAndSellStrategy(bt.Strategy):
                     log_func.Log.log(self, f'OPEN SHORT CREATE, {worst_data._name}, Size: {size}, Price: {worst_data.close[0]:.2f}')
                     self.sell(data=worst_data,size=size)
                 elif pos<0:    
-                    add_pos.addpos.rebalance_short_positions(self,specific_assets=worst_data)
+                    add_pos.AddPos.rebalance_short_positions(self,specific_assets=worst_data)
 
     def grading_middle_function(self, middle_stocks):
         """处理打分后排名中间的品种"""

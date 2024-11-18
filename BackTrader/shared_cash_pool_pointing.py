@@ -1,7 +1,8 @@
-from backtrader.indicators import *
-from BackTrader.tools import log_func
+from tools import log_func
 import pandas as pd
-from BackTrader.strategies import buy_and_sell
+from strategies import buy_and_sell
+import backtrader as bt
+from backtrader.indicators import ExponentialMovingAverage,MovingAverageSimple
 
 
 class Shared_Cash_Pool_Pointing(bt.Strategy):

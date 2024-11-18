@@ -1,7 +1,7 @@
 from backtrader.indicators import *
 from datetime import time
-import strategies
-import tools
+from strategies.trade_logic import TradeLogic
+from tools import data_get,data_io,log_func
 
 
 class Shared_cash_pool(bt.Strategy):
@@ -56,7 +56,7 @@ class Shared_cash_pool(bt.Strategy):
         每个时间步执行共享资金池策略。
         """
         if self.update_percent_judge==0:
-            tools.DataIO.DataIO.change_target_percent(self)
+            data_io.DataIO.change_target_percent(self)
             self.update_percent_judge+=1
         self.shared_cash()  # 执行共享资金池策略
 
@@ -74,7 +74,7 @@ class Shared_cash_pool(bt.Strategy):
             if order.status in [order.Completed]:
                 data=order.data
                 if order.isbuy():  # 买入订单完成
-                    tools.log_func.Log.log(self,
+                    log_func.Log.log(self,
                     f"BUY EXECUTED,{data._name}, Size:{order.executed.size},"
                     f"Price:{order.executed.price:.2f},"
                     f"Cost:{order.executed.value:.2f},"
@@ -83,7 +83,7 @@ class Shared_cash_pool(bt.Strategy):
                 elif order.issell() or order.isclose():  # 卖出订单完成
                     #net_proceeds=order.executed.value-order.executed.comm
                     #self.proceeds+=net_proceeds
-                    tools.log_func.Log.log(self,
+                    log_func.Log.log(self,
                     f"SELL EXECUTED,{data._name},Size:{order.executed.size},"
                     f"Price:{order.executed.price:.2f},"
                     f"Cost:{order.executed.value:.2f},"
@@ -94,11 +94,11 @@ class Shared_cash_pool(bt.Strategy):
                     #if self.getposition(data).size==0:
                     #self.allocate_proceeds(net_proceeds,sold_data=data)
             elif order.status is order.Canceled:
-                tools.log_func.Log.log(self,'ORDER CANCELED')
+                log_func.Log.log(self,'ORDER CANCELED')
             elif order.status is order.Rejected:
-                tools.log_func.Log.log(self,'ORDER REJECTED')
+                log_func.Log.log(self,'ORDER REJECTED')
             elif order.status is order.Margin:
-                tools.log_func.Log.log(self,'ORDER MARGIN')
+                log_func.Log.log(self,'ORDER MARGIN')
         else:
             pass
 
@@ -111,14 +111,14 @@ class Shared_cash_pool(bt.Strategy):
             pos=self.getposition(data).size
             if pos<=0:
                 size=self.calculate_quantity(data)
-                tools.BuyAndSell.Buy_And_Sell_Strategy.buy_function(self,line=data,size=size)
+                TradeLogic.buy_function(self,line=data,size=size)
                 #BuyAndSell.Buy_And_Sell_Strategy.open_short_function(self,line=data,size=size)
             else:
                 size=self.calculate_quantity(data)
-                tools.BuyAndSell.Buy_And_Sell_Strategy.sell_function(self,line=data,size=size)
+                TradeLogic.sell_function(self,line=data,size=size)
                 #BuyAndSell.Buy_And_Sell_Strategy.close_short_function(self,line=data)
-        tools.AddPos.addpos.rebalance_long_positions(self)
-        tools.AddPos.addpos.rebalance_short_positions(self)
+        TradeLogic.rebalance_long_positions(self)
+        TradeLogic.rebalance_short_positions(self)
 
     
     def calculate_quantity(self, line) -> int:
@@ -131,7 +131,7 @@ class Shared_cash_pool(bt.Strategy):
         return quantity
     
     def stop(self):
-        tools.log_func.Log.log(self,f'Total Proceeds from Sell Orders:{self.proceeds:.2f}')
+        log_func.Log.log(self,f'Total Proceeds from Sell Orders:{self.proceeds:.2f}')
 
     def print_position(self, line) -> None:
         """
