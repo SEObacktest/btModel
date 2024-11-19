@@ -1,6 +1,6 @@
 from backtrader.indicators import *
 from datetime import time
-from strategies.trade_logic import TradeLogic
+from strategies import SharedLogic
 from tools import data_get,data_io,log_func
 
 
@@ -13,6 +13,7 @@ class Shared_cash_pool(bt.Strategy):
         """
         初始化共享资金池策略中的指标，确保每个品种的技术指标独立计算。
         """
+        self.logic=SharedLogic()
         self.sma5 = dict()  # 5日简单移动平均
         self.ema15 = dict()  # 15日指数加权移动平均
         self.bolling_top = dict()  # 布林带上轨
@@ -58,7 +59,7 @@ class Shared_cash_pool(bt.Strategy):
         if self.update_percent_judge==0:
             data_io.DataIO.change_target_percent(self)
             self.update_percent_judge+=1
-        self.shared_cash()  # 执行共享资金池策略
+        self.logic.shared_cash(self)
 
 
     def notify_order(self, order):
@@ -101,34 +102,6 @@ class Shared_cash_pool(bt.Strategy):
                 log_func.Log.log(self,'ORDER MARGIN')
         else:
             pass
-
-    def shared_cash(self):
-        """
-        根据共享资金池策略的条件进行每个品种的买入或卖出。
-        """
-        
-        for data in self.datas:
-            pos=self.getposition(data).size
-            if pos<=0:
-                size=self.calculate_quantity(data)
-                TradeLogic.buy_function(self,line=data,size=size)
-                #BuyAndSell.Buy_And_Sell_Strategy.open_short_function(self,line=data,size=size)
-            else:
-                size=self.calculate_quantity(data)
-                TradeLogic.sell_function(self,line=data,size=size)
-                #BuyAndSell.Buy_And_Sell_Strategy.close_short_function(self,line=data)
-        TradeLogic.rebalance_long_positions(self)
-        TradeLogic.rebalance_short_positions(self)
-
-    
-    def calculate_quantity(self, line) -> int:
-        """
-        根据可用资金计算每次交易的数量。
-        """
-        available_cash=self.broker.getcash()*0.05
-        close_price=line.close[0]
-        quantity=int(available_cash/close_price)
-        return quantity
     
     def stop(self):
         log_func.Log.log(self,f'Total Proceeds from Sell Orders:{self.proceeds:.2f}')
