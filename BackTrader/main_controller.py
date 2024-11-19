@@ -1,6 +1,5 @@
 from tools.data_io import DataIO
 from backtest_control import BackTest
-from strategy_optimization import StrategyOptimization
 class MainController:
     @staticmethod
     def start():
@@ -29,6 +28,8 @@ class MainController:
                 # 执行共享资金池回测
                 BackTest.shared_cash_pointing_test(symbol_list=codes, start_date=start_date, end_date=end_date)
                 continue
+            
+                '''
             elif choose == "4":
                 # 获取用户输入的股票代码、起始日期和结束日期
                 codes, start_date, end_date = DataIO.input_stockInformation()
@@ -36,6 +37,8 @@ class MainController:
                 StrategyOptimization.strategy_optimization_flow(symbol_list=codes, start_date=start_date,
                                                                 end_date=end_date)
                 continue
+                '''
+
             elif choose == "*":
                 # 退出系统
                 print("系统已退出！")
