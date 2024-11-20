@@ -35,8 +35,13 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
         self.shared_cash_pointing()#执行策略
         Log.log(self,f'今天的权益:{self.broker.get_value()}')
         for data in self.datas:
-            Log.log(self,f'收盘价:{data.close[0]}')
+           Log.log(self,f'{data._name}的收盘价:{data.close[0]}')
 
+           hold_equity=self.getposition(data).size*data.close[0]
+           Log.log(self,f'{data._name}的权益:{hold_equity}')
+        print(self.broker.get_cash())
+        print(self.profit)
+        print(self.profit_contribution)
 
     def stop(self):
         #最后一天结束后，把持仓品类的权益释放出来加到各个品种利润上面
@@ -288,11 +293,3 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
                 Log.log(self,"The Buying Above is Rebuy.")
             else:
                 Log.log(self,f'Insufficient allocation for {data._name},Allocation:{allocation_per_asset:.2f},Price:{data.close[0]:.2f}')
-     
-
-
-        
-
-
-
-
