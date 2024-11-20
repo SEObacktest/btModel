@@ -18,6 +18,7 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
         self.dea=dict()
         self.notify_flag=1
         self.profit=dict()#分品类保存利润的字典
+        self.profit_contribution=dict()
         for data in self.datas:
             c=data.close
             self.ema5[data]=ExponentialMovingAverage(c,period=5)
@@ -31,6 +32,7 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
             self.diff[data]=self.ema12[data]-self.ema26[data]
             self.dea[data]=ExponentialMovingAverage(self.diff[data],period=9)
             self.profit[data._name]=0#各品类初始化为0
+            self.profit_contribution[data._name]=0
     def next(self):
         self.shared_cash_pointing()#执行策略
         Log.log(self,f'今天的权益:{self.broker.get_value()}')
