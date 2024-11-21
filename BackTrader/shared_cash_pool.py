@@ -1,7 +1,7 @@
 from backtrader.indicators import *
 from datetime import time
-from .strategies import SharedLogic
-from .tools import data_get,data_io,log_func
+from strategies import SharedLogic
+from tools import data_get,data_io,log_func
 
 
 class Shared_cash_pool(bt.Strategy):

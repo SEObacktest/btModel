@@ -1,7 +1,7 @@
 import backtrader as bt
 from backtrader.indicators import *
-from .strategies import SharedLogic
-from .tools import Log 
+from strategies import SharedLogic
+from tools import Log 
 import pandas as pd
 class Shared_Cash_Pool_Pointing(bt.Strategy):
     def __init__(self):

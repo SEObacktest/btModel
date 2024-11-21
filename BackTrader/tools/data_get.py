@@ -2,7 +2,7 @@ import backtrader as bt
 import tushare as ts
 import datetime
 import pandas as pd
-from BackTrader.config import Config
+
 class DataGet:
     @staticmethod
     def get_str_date_from_int(date_int):
@@ -37,8 +37,7 @@ class DataGet:
         登录Tushare，获取pro_api接口
         :return: 返回Tushare pro_api实例
         """
-        config=Config()
-        token = config.API_KEY 
+        token = '7c15d8db9ccc0383e40eb7487930fa9eb88eaca08573fe1da440aa54'
         ts.set_token(token)  # 设置Tushare Token
         pro = ts.pro_api(token)  # 获取Tushare pro接口
         return pro
