@@ -1,5 +1,5 @@
-from .tools.data_io import DataIO
-from .backtest_control import BackTest
+from tools.data_io import DataIO
+from backtest_control import BackTest
 class MainController:
     @staticmethod
     def start():

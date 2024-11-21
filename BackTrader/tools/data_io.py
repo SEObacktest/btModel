@@ -3,6 +3,8 @@ import pandas as pd
 import datetime
 from backtrader.analyzers import *
 import numpy as np
+import tools.log_func as log
+
 
 class DataIO():
     """

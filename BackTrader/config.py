@@ -1,9 +1,8 @@
 import configparser
 import os
 import sys
-CFG_FL_PATH="sys.cfg"
+CFG_FL_PATH="../sys.cfg"
 USER_CFG_SECTION = "cerebro_config"
-SYS_CFG_SECTION="sys_config"
 class Config:
     def __init__(self):
         config=configparser.ConfigParser()
@@ -15,4 +14,3 @@ class Config:
             config.read(CFG_FL_PATH)
     
         self.INIT_BALANCE=config.get(USER_CFG_SECTION,'init_balance')
-        self.API_KEY=config.get(SYS_CFG_SECTION,'api_token')

@@ -1,12 +1,12 @@
 import backtrader as bt
-from .tools.data_get import DataGet
-from .backtest_setup import BackTestSetup
-from .solo_cash_pool import Solo_cash_pool
-from .tools.data_io import DataIO
+from tools.data_get import DataGet
+from backtest_setup import BackTestSetup
+from solo_cash_pool import Solo_cash_pool
+from tools.data_io import DataIO
 from backtrader_plotting import Bokeh  # 导入Bokeh模块，用于绘制回测结果的图表
 from backtrader_plotting.schemes import Tradimo  # 导入Bokeh的绘图方案
-from .shared_cash_pool import Shared_cash_pool
-from .shared_cash_pool_pointing import Shared_Cash_Pool_Pointing
+from shared_cash_pool import Shared_cash_pool
+from shared_cash_pool_pointing import Shared_Cash_Pool_Pointing
 class BackTest:
     @staticmethod
     def batch_test(symbol_list, start_date, end_date):

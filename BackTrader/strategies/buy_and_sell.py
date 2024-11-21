@@ -1,6 +1,6 @@
 import backtrader as bt
-from BackTrader.tools import log_func
-import BackTrader.shared_cash_pool
+from tools import log_func
+import shared_cash_pool
 class BuyAndSellStrategy(bt.Strategy):
 
     '''def buy_function(self, line, size):
