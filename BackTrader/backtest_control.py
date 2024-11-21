@@ -21,6 +21,7 @@ class BackTest:
             BackTestSetup.set_cerebro(cerebro=cerebro, opt_judge=False)  # 设置回测引擎
             cerebro.addstrategy(Solo_cash_pool)  # 添加策略（单独资金池策略）
             DataGet.get_data(codes=symbol, cerebro=cerebro, start_date=start_date, end_date=end_date)  # 获取数据
+
             strat = cerebro.run()[0]  # 运行回测并获取策略实例
             print("========独立资金池批量回测========")
             print(f"品种：{symbol}")
@@ -52,6 +53,8 @@ class BackTest:
         pic = Bokeh(style='bar', plot_mode='single', scheme=Tradimo())  # 使用Bokeh绘图
         cerebro.plot(pic)  # 绘制回测结果
 
+
+
     def shared_cash_pointing_test(symbol_list, start_date, end_date):
         """
         使用共享资金池进行打分回测
@@ -70,5 +73,5 @@ class BackTest:
         print(f"回测区间：{DataGet.get_date_from_int(start_date)}至{DataGet.get_date_from_int(end_date)}")
         DataIO.text_report(cerebro=cerebro, strat=strat)  # 输出回测报告
         print("========共享资金池打分回测========")
-        #pic = Bokeh(style='bar', plot_mode='single', scheme=Tradimo())  # 使用Bokeh绘图
-        #cerebro.plot(pic)  # 绘制回测结果
+        pic = Bokeh(style='bar', plot_mode='single', scheme=Tradimo())  # 使用Bokeh绘图
+        cerebro.plot(pic)  # 绘制回测结果

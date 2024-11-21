@@ -1,6 +1,7 @@
 from .trade_logic import TradeLogic
-from tools import Log
+from BackTrader.tools import Log
 import backtrader as bt
+
 class SharedLogic():
     def __init__(self):
         self.log=Log()
