@@ -1,5 +1,5 @@
 import backtrader as bt
-from tools.log_func import Log
+from BackTrader.tools.log_func import Log
 class TradeLogic():
 
     def buy_function(self,strategy:bt.Strategy,line:bt.DataSeries,size:float):
