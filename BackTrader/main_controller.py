@@ -8,7 +8,7 @@ class MainController:
         """
         while True:
             print("*************************************************************************************")
-            choose = input("请选择功能：\n1.批量独立资金池回测\n2.共享资金池回测\n3.共享资金池打分回测\n4.策略参数优化\n(输入：“*”退出系统)\n")
+            choose = input("请选择功能：\n1.批量独立资金池回测\n2.共享资金池回测\n3.共享资金池打分回测\n4.峰谷值测试\n(输入：“*”退出系统)\n")
 
             if choose == "1":
                 # 获取用户输入的股票代码、起始日期和结束日期
@@ -29,15 +29,14 @@ class MainController:
                 BackTest.shared_cash_pointing_test(symbol_list=codes, start_date=start_date, end_date=end_date)
                 continue
             
-                '''
+
             elif choose == "4":
                 # 获取用户输入的股票代码、起始日期和结束日期
                 codes, start_date, end_date = DataIO.input_stockInformation()
                 # 执行策略参数优化流程
-                StrategyOptimization.strategy_optimization_flow(symbol_list=codes, start_date=start_date,
-                                                                end_date=end_date)
+                BackTest.shared_cash_pv_test(symbol_list=codes, start_date=start_date,end_date=end_date)
                 continue
-                '''
+
 
             elif choose == "*":
                 # 退出系统
