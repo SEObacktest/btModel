@@ -39,7 +39,6 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
         Log.log(self,f'今天的权益:{self.broker.get_value()}')
         for data in self.datas:
            Log.log(self,f'{data._name}的收盘价:{data.close[0]}')
-
            hold_equity=self.getposition(data).size*data.close[0]
            Log.log(self,f'{data._name}的权益:{hold_equity}')
         print(self.broker.get_cash())
