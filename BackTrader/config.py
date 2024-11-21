@@ -14,3 +14,4 @@ class Config:
             config.read(CFG_FL_PATH)
     
         self.INIT_BALANCE=config.get(USER_CFG_SECTION,'init_balance')
+        self.API_KEY=config.get(USER_CFG_SECTION,'api_key')

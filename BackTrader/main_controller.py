@@ -8,6 +8,14 @@ class MainController:
         """
         while True:
             print("*************************************************************************************")
+            pick=input("请选择交易大类：\n1.股票\n2.期货\n")
+            if pick=='1':
+                pass
+            if pick=='2':
+                codes, start_date, end_date = DataIO.input_futureInformation()
+                BackTest.shared_cash_fut_pointing_test(symbol_list=codes,start_date=start_date,end_date=end_date)
+                return
+            print("*************************************************************************************")
             choose = input("请选择功能：\n1.批量独立资金池回测\n2.共享资金池回测\n3.共享资金池打分回测\n4.策略参数优化\n(输入：“*”退出系统)\n")
 
             if choose == "1":
@@ -27,7 +35,7 @@ class MainController:
                 codes, start_date, end_date = DataIO.input_stockInformation()
                 # 执行共享资金池回测
                 BackTest.shared_cash_pointing_test(symbol_list=codes, start_date=start_date, end_date=end_date)
-                continue
+                return
             
                 '''
             elif choose == "4":

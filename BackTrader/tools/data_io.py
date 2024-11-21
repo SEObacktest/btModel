@@ -29,7 +29,21 @@ class DataIO():
         print("========现有上市交易品种列表========")
         print(data)
         print("================================")
-
+    @staticmethod
+    def get_future_codes():
+        # 登录Tushare获取数据接口
+        pro = DataGet.login_ts()
+        # 获取上市状态为'L'（上市）的股票基本信息
+        data = pro.fut_basic(exchange='CFFEX', fut_type=2, fields='ts_code,name,list_date,delist_date')
+        # 重命名列名为中文，方便显示
+        new_col = ['code', '期货名', '上市日期','最后交易日期']
+        data.columns = new_col
+        # 将股票列表保存为CSV文件
+        data.to_csv("future_codes.csv")
+        # 打印当前上市交易的品种列表
+        print("========交易品种列表========")
+        print(data)
+        print("================================")
     @staticmethod
     def show_stock_codes():
         """
@@ -59,9 +73,10 @@ class DataIO():
             name_dict[row['股票名']] = information_list  # 键为股票名称，值为信息列表
 
         return name_dict  # 返回股票信息字典
-
+    
     @staticmethod
     def input_stockInformation():
+
         """
         交互式地获取用户想要回测的股票名称、回测起始日期和结束日期。
         :return: 用户选择的股票代码列表、回测起始日期和结束日期
@@ -129,7 +144,72 @@ class DataIO():
                     continue
             break  # 起始日期和结束日期均输入正确，退出循环
         return codes, start_date, end_date  # 返回股票代码列表和日期
+    @staticmethod 
+    def input_futureInformation():
 
+        """
+        交互式地获取用户想要回测的股票名称、回测起始日期和结束日期。
+        :return: 用户选择的股票代码列表、回测起始日期和结束日期
+        """
+        # 显示股票代码列表并获取股票信息字典
+        name_dict = DataIO.show_future_codes()
+
+        codes = list()  # 存储用户选择的股票代码
+        names = list()  # 存储用户输入的股票名称
+        print("请对应期货代码表输入，需要回测的期货名称,结束请输入“#” ")
+        print("===============================================")
+        # 循环获取用户输入的股票名称
+        while True:
+            name = input("请继续输入：\n").strip()
+            if name == "#":
+                break  # 输入'#'表示结束输入
+            if name not in name_dict:
+                print("输入期货不存在，请重新输入")
+                continue  # 如果股票名称不存在，提示重新输入
+            names.append(name)  # 添加到名称列表中
+        # 根据名称列表获取对应的股票代码
+        for name in names:
+            codes.append(name_dict[name][0])
+        # 获取回测的起始日期和结束日期
+        while True:
+            if not names:
+                break  # 如果没有选择任何股票，直接退出
+            judge = True
+            try:
+                # 输入回测起始日期
+                start_date = int(input("请按说明格式输入回测起始日期：\n（例如：若为2021年9月10日则应输入：20210910）\n").strip())
+                if start_date == "":
+                    print("输入为空！请重试！！！")
+                    continue
+            except ValueError:
+                print("非法输入！请重试！！！")
+                continue
+            # 检查起始日期是否合法
+            for name in names:
+                if DataGet.get_date_from_int(start_date) > datetime.date.today():
+                    print("起始日期不可晚于今日，请重新输入！！！")
+                    judge = False
+                    break
+
+            if not judge:
+                continue  # 如果起始日期不合法，重新输入
+            while True:
+                try:
+                    # 输入回测结束日期
+                    end_date = int(input("请按说明格式输入回测结束日期：\n（例如：若为2021年9月10日则应输入：20210910）\n").strip())
+                    if DataGet.get_date_from_int(end_date) > datetime.date.today():
+                        print("结束日期不可晚于今日，请重新输入！！！")
+                        continue
+                    if end_date < start_date:
+                        print("结束日期不可早于起始日期！！！请重试！！！")
+                        continue
+                    break  # 结束日期输入正确，退出循环
+                except ValueError:
+                    print("非法输入！请重试！！！")
+                    continue
+            break  # 起始日期和结束日期均输入正确，退出循环
+        return codes, start_date, end_date  # 返回股票代码列表和日期
+ 
     @staticmethod
     def add_analysers(cerebro):
         """
@@ -350,4 +430,33 @@ class DataIO():
                     log.Log.Log.log(self,"Target percentage must be between 0 and 1.")
             except ValueError:
                 log.Log.Log.log("Invalid input. Please enter a valid number.")
+    @staticmethod
+    def show_future_codes():
+        """
+        显示所有上市交易的股票代码，并返回股票名称与代码、上市日期的对应字典。
+        :return: 股票名称与其代码和上市日期的字典
+        """
+        # 设置Pandas显示选项，显示所有列和所有行
+        pd.set_option('display.max_columns', None)
+        pd.set_option('display.max_rows', None)
+        # 读取之前保存的股票代码CSV文件
+        data = pd.read_csv("datasets/future_codes.csv", index_col=0)
+        # 重命名列名为中文
+        # 打印股票代码列表
+        print("===================期货品种代码列表===================")
+        print(data)
+        print("===============================================")
+        # 创建一个字典，用于存储股票名称与其代码和上市日期的对应关系
+        name_dict = dict()
+
+        # 遍历每一行数据，填充name_dict
+        for index, row in data.iterrows():
+            information_list = list()
+            information_list.append(row['code'])  # 添加股票代码
+            information_list.append(row['期货名'])
+            information_list.append(row['上市日期'])  # 添加上市日期
+            information_list.append(row['最后交易日期'])
+            name_dict[row['期货名']] = information_list  # 键为股票名称，值为信息列表
+        return name_dict  # 返回股票信息字典
+
 
