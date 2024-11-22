@@ -1,6 +1,6 @@
 import backtrader as bt
-from BackTrader.tools import log_func
-from BackTrader.tools.log_func import Log
+from tools import log_func
+from tools.log_func import Log
 # import sys
 # sys.path.append("..")
 # from BackTrader import shared_cash_pool
