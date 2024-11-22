@@ -1,5 +1,11 @@
 import backtrader as bt
-from tools.log_func import Log
+from BackTrader.tools import log_func
+from BackTrader.tools.log_func import Log
+# import sys
+# sys.path.append("..")
+# from BackTrader import shared_cash_pool
+# from BackTrader.tools import add_pos
+
 class TradeLogic():
 
     def buy_function(self,strategy:bt.Strategy,line:bt.DataSeries,size:float):

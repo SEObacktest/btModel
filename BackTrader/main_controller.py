@@ -37,15 +37,14 @@ class MainController:
                 BackTest.shared_cash_pointing_test(symbol_list=codes, start_date=start_date, end_date=end_date)
                 return
             
-                '''
+
             elif choose == "4":
                 # 获取用户输入的股票代码、起始日期和结束日期
                 codes, start_date, end_date = DataIO.input_stockInformation()
                 # 执行策略参数优化流程
-                StrategyOptimization.strategy_optimization_flow(symbol_list=codes, start_date=start_date,
-                                                                end_date=end_date)
+                BackTest.shared_cash_pv_test(symbol_list=codes, start_date=start_date,end_date=end_date)
                 continue
-                '''
+
 
             elif choose == "*":
                 # 退出系统
