@@ -105,13 +105,6 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
                         
                     elif (order.executed.size*order.executed.value)<0:
                         self.cashflow(data,1,order)
-                        
-                    
-
-
-
-
-
     def cashflow(self,data,symbol,order):
         #通过订单和品类，改变字典中这个品类的利润
         if symbol==1:
