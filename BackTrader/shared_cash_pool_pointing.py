@@ -30,6 +30,8 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
         self.profit_contribution=dict()
         self.old_position=0
         self.EMA26=dict()
+        self.EMA12=dict()
+        self.DEA=dict()
         for data in self.datas:
             c=data.close
             '''self.ema26[data]=ExponentialMovingAverage(c,period=26)
@@ -45,7 +47,11 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
             self.MACD[data]=2*(self.diff[data]-self.dea[data])'''
             self.profit[data._name]=0#各品类初始化为0
             self.profit_contribution[data._name]=0
-            self.EMA26[data]=Indicators.CustomEMA26(data)
+            self.EMA26[data]=Indicators.CustomEMA(c,period=26)
+            self.EMA12[data]=Indicators.CustomEMA(c,period=12)
+            self.diff[data]=self.EMA12[data]-self.EMA26[data]
+            self.DEA[data] =Indicators.CustomEMA(self.diff[data], period=9)
+            self.MACD[data]=2*(self.diff[data]-self.DEA[data])
     def next(self):
         current_date = self.datas[0].datetime.date(0)
         if self.params.backtest_start_date <= current_date <= self.params.backtest_end_date:
@@ -60,11 +66,15 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
                     f'MACD:{self.MACD[data][0]}'
                     )'''
                 Log.log(self,f'{data._name}的指标,EMA26:{self.EMA26[data][0]},')
+                Log.log(self,f'{data._name}的指标,EMA12:{self.EMA12[data][0]},')
+                Log.log(self,f'{data._name}的指标,diff:{self.diff[data][0]},')
+                Log.log(self,f'{data._name}的指标,DEA:{self.DEA[data][0]},')
+                Log.log(self,f'{data._name}的指标,MACD:{self.MACD[data][0]},')
                 hold_equity=self.getposition(data).size*data.close[0]
-                Log.log(self,f'{data._name}的权益:{abs(hold_equity)}')
-            Log.log(self,f'今天的可用资金:{self.cash}')
-            print(self.profit)
-            Log.log(self,f'今天的权益:{self.getvalue()}')
+                #Log.log(self,f'{data._name}的权益:{abs(hold_equity)}')
+            #Log.log(self,f'今天的可用资金:{self.cash}')
+            #print(self.profit)
+            #Log.log(self,f'今天的权益:{self.getvalue()}')
 
     def stop(self):
         #最后一天结束后，把持仓品类的权益释放出来加到各个品种利润上面
