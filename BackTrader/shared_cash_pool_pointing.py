@@ -3,6 +3,7 @@ from backtrader.indicators import *
 from strategies import SharedLogic
 from tools import Log 
 import pandas as pd
+import Indicators
 
 class Shared_Cash_Pool_Pointing(bt.Strategy):
     def __init__(self):
@@ -23,6 +24,7 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
         self.profit=dict()#分品类保存利润的字典
         self.profit_contribution=dict()
         self.old_position=0
+        self.EMA26=dict()
         for data in self.datas:
             c=data.close
             self.ema26[data]=ExponentialMovingAverage(c,period=26)
@@ -38,11 +40,12 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
             self.MACD[data]=2*(self.diff[data]-self.dea[data])
             self.profit[data._name]=0#各品类初始化为0
             self.profit_contribution[data._name]=0
+            self.EMA26[data]=Indicators.CustomEMA26()
     def next(self):
         self.shared_cash_pointing()#执行策略
         for data in self.datas:
            Log.log(self,f'{data._name}的收盘价:{data.close[0]}')
-
+           Log.log(self,f'')
            Log.log(self,f'{data._name}的指标,EMA12:{self.ema12[data][0]},'
                    f'EMA26:{self.ema26[data][0]},'
                    f'DEA:{self.dea[data][0]},'
