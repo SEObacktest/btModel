@@ -54,7 +54,8 @@ class DataGet:
         code_list = codes if isinstance(codes, list) else codes.split()  # 确保codes是列表形式
         # 加载数据
         for code in code_list:
-            df = pro.daily(ts_code=f"{code}", start_date=start_date, end_date=end_date)  # 获取日线数据
+            #df = pro.daily(ts_code=f"{code}", start_date=start_date, end_date=end_date)  # 获取日线数据
+            df = pro.daily(ts_code=f"{code}")  # 获取日线数据
             df['trade_date'] = pd.to_datetime(df['trade_date'])  # 转换交易日期为日期类型
             df.set_index('trade_date', inplace=True)  # 将交易日期设为索引
             df['openinterest'] = 0  # 初始化持仓量为0

@@ -10,7 +10,10 @@ class DataIO():
     """
     数据输入输出类，提供与用户交互的功能，包括获取股票代码、选择回测指标、设置参数优化等。
     """
-
+    def __init__(self):
+        self.start_date=None
+        self.end_date=None
+        
     @staticmethod
     def get_stock_codes():
         """
