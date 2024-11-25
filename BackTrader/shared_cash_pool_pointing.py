@@ -25,6 +25,7 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
         self.old_position=0
         for data in self.datas:
             c=data.close
+            self.ema26[data]=ExponentialMovingAverage(c,period=26)
             self.ema5[data]=ExponentialMovingAverage(c,period=5)
             self.ema10[data]=ExponentialMovingAverage(c,period=10)
             self.ema15[data]=ExponentialMovingAverage(c,period=15)
@@ -32,7 +33,6 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
             self.sma10[data]=MovingAverageSimple(c,period=10)
             self.sma15[data]=MovingAverageSimple(c,period=15)
             self.ema12[data]=ExponentialMovingAverage(c,period=12)
-            self.ema26[data]=ExponentialMovingAverage(c,period=26)
             self.diff[data]=self.ema12[data]-self.ema26[data]
             self.dea[data]=ExponentialMovingAverage(self.diff[data],period=9)
             self.MACD[data]=2*(self.diff[data]-self.dea[data])
@@ -49,6 +49,7 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
                    f'DIFF:{self.diff[data][0]},'
                    f'MACD:{self.MACD[data][0]}'
                    )
+           #Log.log(self,f'{data._name}的指标,EMA26:{self.ema26[data][0]},')
            hold_equity=self.getposition(data).size*data.close[0]
            Log.log(self,f'{data._name}的权益:{abs(hold_equity)}')
         Log.log(self,f'今天的可用资金:{self.cash}')
@@ -147,7 +148,7 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
         self.grading_open_short_function(scores_df)
         #分低的执行开空
         self.grading_close_function(scores_df)
-        #中间的平仓
+        #中间的平仓'''
         
 
     def grading_open_long_function(self,rank):#打分靠前的开多
