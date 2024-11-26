@@ -65,7 +65,7 @@ class BackTest:
         cerebro = bt.Cerebro()  # 创建Backtrader回测引擎
         cerebro.broker.set_coc(True)
         BackTestSetup.set_cerebro(cerebro=cerebro, opt_judge=False)  # 设置回测引擎
-        cerebro.addstrategy(Shared_Cash_Pool_Pointing)  # 添加策略（打分策略）
+        cerebro.addstrategy(Shared_Cash_Pool_Pointing,backtest_start_date=DataGet.get_date_from_int(start_date),backtest_end_date=DataGet.get_date_from_int(end_date))  # 添加策略（打分策略）
         DataGet.get_fut_data(cerebro=cerebro, codes=symbol_list, start_date=start_date, end_date=end_date)  # 获取数据
         strat = cerebro.run()[0]  # 运行回测并获取策略实例
         print("========共享资金池打分回测========")

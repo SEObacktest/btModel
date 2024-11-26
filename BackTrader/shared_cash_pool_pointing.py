@@ -14,67 +14,41 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
     def __init__(self):
         #各种打分用的指标
         self.cash=100000000
-        self.ema5=dict()
-        self.ema10=dict()
-        self.ema15=dict()
-        self.sma5=dict()
-        self.sma10=dict()
-        self.sma15=dict()
-        self.ema12=dict()
-        self.ema26=dict()
-        self.diff=dict()
-        self.dea=dict()
+        self.DIFF=dict()
         self.MACD=dict()
         self.notify_flag=1
         self.profit=dict()#分品类保存利润的字典
         self.profit_contribution=dict()
-        self.old_position=0
         self.EMA26=dict()
         self.EMA12=dict()
         self.DEA=dict()
+        self.target_percent=0.05
         for data in self.datas:
             c=data.close
-            '''self.ema26[data]=ExponentialMovingAverage(c,period=26)
-            self.ema5[data]=ExponentialMovingAverage(c,period=5)
-            self.ema10[data]=ExponentialMovingAverage(c,period=10)
-            self.ema15[data]=ExponentialMovingAverage(c,period=15)
-            self.sma5[data]=MovingAverageSimple(c,period=5)
-            self.sma10[data]=MovingAverageSimple(c,period=10)
-            self.sma15[data]=MovingAverageSimple(c,period=15)
-            self.ema12[data]=ExponentialMovingAverage(c,period=12)
-            self.diff[data]=self.ema12[data]-self.ema26[data]
-            self.dea[data]=ExponentialMovingAverage(self.diff[data],period=9)
-            self.MACD[data]=2*(self.diff[data]-self.dea[data])'''
             self.profit[data._name]=0#各品类初始化为0
             self.profit_contribution[data._name]=0
             self.EMA26[data]=Indicators.CustomEMA(c,period=26)
             self.EMA12[data]=Indicators.CustomEMA(c,period=12)
-            self.diff[data]=self.EMA12[data]-self.EMA26[data]
-            self.DEA[data] =Indicators.CustomEMA(self.diff[data], period=9)
-            self.MACD[data]=2*(self.diff[data]-self.DEA[data])
+            self.DIFF[data]=self.EMA12[data]-self.EMA26[data]
+            self.DEA[data] =Indicators.CustomEMA(self.DIFF[data], period=9)
+            self.MACD[data]=2*(self.DIFF[data]-self.DEA[data])
+
     def next(self):
         current_date = self.datas[0].datetime.date(0)
         if self.params.backtest_start_date <= current_date <= self.params.backtest_end_date:
             self.shared_cash_pointing()#执行策略
             for data in self.datas:
-                '''Log.log(self,f'{data._name}的收盘价:{data.close[0]}')
-                Log.log(self,f'')
-                Log.log(self,f'{data._name}的指标,EMA12:{self.ema12[data][0]},'
-                    f'EMA26:{self.ema26[data][0]},'
-                    f'DEA:{self.dea[data][0]},'
-                    f'DIFF:{self.diff[data][0]},'
-                    f'MACD:{self.MACD[data][0]}'
-                    )'''
+                Log.log(self,f'{data._name}的收盘价:{data.close[0]}')
                 Log.log(self,f'{data._name}的指标,EMA26:{self.EMA26[data][0]},')
                 Log.log(self,f'{data._name}的指标,EMA12:{self.EMA12[data][0]},')
-                Log.log(self,f'{data._name}的指标,diff:{self.diff[data][0]},')
+                Log.log(self,f'{data._name}的指标,DIFF:{self.DIFF[data][0]},')
                 Log.log(self,f'{data._name}的指标,DEA:{self.DEA[data][0]},')
                 Log.log(self,f'{data._name}的指标,MACD:{self.MACD[data][0]},')
                 hold_equity=self.getposition(data).size*data.close[0]
-                #Log.log(self,f'{data._name}的权益:{abs(hold_equity)}')
-            #Log.log(self,f'今天的可用资金:{self.cash}')
-            #print(self.profit)
-            #Log.log(self,f'今天的权益:{self.getvalue()}')
+                Log.log(self,f'{data._name}的权益:{abs(hold_equity)}')
+            Log.log(self,f'今天的可用资金:{self.cash}')
+            print(self.profit)
+            Log.log(self,f'今天的权益:{self.getvalue()}')
 
     def stop(self):
         #最后一天结束后，把持仓品类的权益释放出来加到各个品种利润上面
@@ -142,25 +116,23 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
     def shared_cash_pointing(self):#具体的策略（打分方式是随便写的）
         self.point=dict()#字典当打分表，记录每个品种的打分情况
         for data in self.datas:#满足一个指标就加一分
+
+            #if len(data)<=len(self):
+                #continue
+
             self.point[data._name]=0
-            '''if round(self.diff[data][0],2)>round(self.dea[data][0],2) and round(self.diff[data][-1],2)<=round(self.dea[data][-1],2):
+            if round(self.DIFF[data][0],2)>round(self.DEA[data][0],2) and round(self.DIFF[data][-1],2)<=round(self.DEA[data][-1],2):
                 self.point[data._name]+=3
-                Log.log(self,f'MACD金叉')
             if round(self.MACD[data][0],2)>round(self.MACD[data][-1],2):
                 self.point[data._name]+=2
-                Log.log(self,f'MACD比昨天大')
             if round(self.MACD[data][0],2)>0:
                 self.point[data._name]+=1
-                Log.log(self,f'MACD大于零')
-            if round(self.diff[data][0],2)<=round(self.dea[data][0],2) and round(self.diff[data][-1],2)>round(self.dea[data][-1],2):
+            if round(self.DIFF[data][0],2)<=round(self.DEA[data][0],2) and round(self.DIFF[data][-1],2)>round(self.DEA[data][-1],2):
                 self.point[data._name]-=3
-                Log.log(self,f'MACD死叉')
             if round(self.MACD[data][0],2)<=round(self.MACD[data][-1],2):
                 self.point[data._name]-=2
-                Log.log(self,f'MACD比昨天小')
             if round(self.MACD[data][0],2)<=0:
                 self.point[data._name]-=1
-                Log.log(self,f'MACD小于等于0')'''
             if self.EMA26[data][0]>2:
                 self.point[data._name]+=1
 

@@ -41,6 +41,13 @@ class DataIO():
         # 重命名列名为中文，方便显示
         new_col = ['code', '期货名', '上市日期','最后交易日期']
         data.columns = new_col
+        exchange_list=['DCE','CZCE','SHFE','INE','GFEX']
+        for exchange_name in exchange_list:
+            data_new = pro.fut_basic(exchange=exchange_name, fut_type=2, fields='ts_code,name,list_date,delist_date')
+            # 重命名列名为中文，方便显示
+            new_col = ['code', '期货名', '上市日期','最后交易日期']
+            data_new.columns = new_col
+            data=pd.concat([data,data_new],axis=0)
         # 将股票列表保存为CSV文件
         data.to_csv("future_codes.csv")
         # 打印当前上市交易的品种列表
@@ -275,6 +282,7 @@ class DataIO():
         :param strat: 运行后的策略实例
         """
         endingcash = cerebro.broker.get_value()  # 获取期末权益
+        #endingcash=shared_cash_pool_pointing.Shared_Cash_Pool_Pointing.getvalue()
         if endingcash <= 0:
             endingcash = 0
         # 输出期初和期末权益
