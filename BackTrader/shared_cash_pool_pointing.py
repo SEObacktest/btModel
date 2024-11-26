@@ -23,29 +23,55 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
         self.EMA12=dict()
         self.DEA=dict()
         self.target_percent=0.05
+        self.start_date=dict()
+        self.first_date=dict()
         for data in self.datas:
             c=data.close
             self.profit[data._name]=0#各品类初始化为0
             self.profit_contribution[data._name]=0
+            self.first_date[data]=None
             self.EMA26[data]=Indicators.CustomEMA(c,period=26)
             self.EMA12[data]=Indicators.CustomEMA(c,period=12)
             self.DIFF[data]=self.EMA12[data]-self.EMA26[data]
             self.DEA[data] =Indicators.CustomEMA(self.DIFF[data], period=9)
             self.MACD[data]=2*(self.DIFF[data]-self.DEA[data])
 
+    def prenext(self):
+        current_date = self.datetime.date(0)
+        if self.params.backtest_start_date <= current_date <= self.params.backtest_end_date:
+            self.shared_cash_pointing_prenext()
+            for data in self.datas:
+                if current_date>=self.getdatabyname(data._name).datetime.date(0):
+                    Log.log(self,f'{data._name}的收盘价:{data.close[0]}')
+                    Log.log(self,f'{data._name}的指标,EMA26:{self.EMA26[data][0]},')
+                    Log.log(self,f'{data._name}的指标,EMA12:{self.EMA12[data][0]},')
+                    Log.log(self,f'{data._name}的指标,DIFF:{self.DIFF[data][0]},')
+                    Log.log(self,f'{data._name}的指标,DEA:{self.DEA[data][0]},')
+                    Log.log(self,f'{data._name}的指标,MACD:{self.MACD[data][0]},')
+    
+            Log.log(self,f'今天的可用资金:{self.cash}')
+            print(self.profit)
+            Log.log(self,f'今天的权益:{self.getvalue()}')
+
     def next(self):
         current_date = self.datas[0].datetime.date(0)
         if self.params.backtest_start_date <= current_date <= self.params.backtest_end_date:
             self.shared_cash_pointing()#执行策略
             for data in self.datas:
-                Log.log(self,f'{data._name}的收盘价:{data.close[0]}')
-                Log.log(self,f'{data._name}的指标,EMA26:{self.EMA26[data][0]},')
-                Log.log(self,f'{data._name}的指标,EMA12:{self.EMA12[data][0]},')
-                Log.log(self,f'{data._name}的指标,DIFF:{self.DIFF[data][0]},')
-                Log.log(self,f'{data._name}的指标,DEA:{self.DEA[data][0]},')
-                Log.log(self,f'{data._name}的指标,MACD:{self.MACD[data][0]},')
-                hold_equity=self.getposition(data).size*data.close[0]
-                Log.log(self,f'{data._name}的权益:{abs(hold_equity)}')
+                #if current_date>=self.getdatabyname(data._name).datetime.date(0):
+                #if current_date>=self.start_date[data]:
+                #if len(data)>0:
+                    Log.log(self,f'{data._name}的收盘价:{data.close[0]}')
+                    Log.log(self,f'{data._name}的指标,EMA26:{self.EMA26[data][0]},')
+                    Log.log(self,f'{data._name}的指标,EMA12:{self.EMA12[data][0]},')
+                    Log.log(self,f'{data._name}的指标,DIFF:{self.DIFF[data][0]},')
+                    Log.log(self,f'{data._name}的指标,DEA:{self.DEA[data][0]},')
+                    Log.log(self,f'{data._name}的指标,MACD:{self.MACD[data][0]},')
+                    hold_equity=self.getposition(data).size*data.close[0]
+                    Log.log(self,f'{data._name}的权益:{abs(hold_equity)}')
+
+                #else:
+                    #continue
             Log.log(self,f'今天的可用资金:{self.cash}')
             print(self.profit)
             Log.log(self,f'今天的权益:{self.getvalue()}')
@@ -115,33 +141,67 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
 
     def shared_cash_pointing(self):#具体的策略（打分方式是随便写的）
         self.point=dict()#字典当打分表，记录每个品种的打分情况
+        current_date=self.datetime.date(0)
         for data in self.datas:#满足一个指标就加一分
-
-            #if len(data)<=len(self):
-                #continue
-
-            self.point[data._name]=0
-            if round(self.DIFF[data][0],2)>round(self.DEA[data][0],2) and round(self.DIFF[data][-1],2)<=round(self.DEA[data][-1],2):
-                self.point[data._name]+=3
-            if round(self.MACD[data][0],2)>round(self.MACD[data][-1],2):
-                self.point[data._name]+=2
-            if round(self.MACD[data][0],2)>0:
-                self.point[data._name]+=1
-            if round(self.DIFF[data][0],2)<=round(self.DEA[data][0],2) and round(self.DIFF[data][-1],2)>round(self.DEA[data][-1],2):
-                self.point[data._name]-=3
-            if round(self.MACD[data][0],2)<=round(self.MACD[data][-1],2):
-                self.point[data._name]-=2
-            if round(self.MACD[data][0],2)<=0:
-                self.point[data._name]-=1
-            if self.EMA26[data][0]>2:
-                self.point[data._name]+=1
+            #if current_date>self.getdatabyname(data._name).datetime.date(0):  
+            if 1:
+                self.point[data._name]=0
+                if round(self.DIFF[data][0],2)>round(self.DEA[data][0],2) and round(self.DIFF[data][-1],2)<=round(self.DEA[data][-1],2):
+                    self.point[data._name]+=3
+                if round(self.MACD[data][0],2)>round(self.MACD[data][-1],2):
+                    self.point[data._name]+=2
+                if round(self.MACD[data][0],2)>0:
+                    self.point[data._name]+=1
+                if round(self.DIFF[data][0],2)<=round(self.DEA[data][0],2) and round(self.DIFF[data][-1],2)>round(self.DEA[data][-1],2):
+                    self.point[data._name]-=3
+                if round(self.MACD[data][0],2)<=round(self.MACD[data][-1],2):
+                    self.point[data._name]-=2
+                if round(self.MACD[data][0],2)<=0:
+                    self.point[data._name]-=1
+                if self.EMA26[data][0]>2:
+                    self.point[data._name]+=1
 
         scores_df=pd.DataFrame(list(self.point.items()),columns=['Stock','Score'])#记录打分表
-        self.grading_open_long_function(scores_df)
+        if len(scores_df)>=2:
+        #if 1:
+            self.grading_open_long_function(scores_df)
         #分高的执行开多
-        self.grading_open_short_function(scores_df)
+            self.grading_open_short_function(scores_df)
         #分低的执行开空
-        self.grading_close_function(scores_df)
+            self.grading_close_function(scores_df)
+        #中间的平仓'''
+        
+
+    def shared_cash_pointing_prenext(self):#具体的策略（打分方式是随便写的）
+        self.point=dict()#字典当打分表，记录每个品种的打分情况
+        current_date=self.datetime.date(0)
+        for data in self.datas:#满足一个指标就加一分
+            if current_date>=self.getdatabyname(data._name).datetime.date(0):  
+                self.point[data._name]=0
+                if round(self.DIFF[data][0],2)>round(self.DEA[data][0],2) and round(self.DIFF[data][-1],2)<=round(self.DEA[data][-1],2):
+                    self.point[data._name]+=3
+                if round(self.MACD[data][0],2)>round(self.MACD[data][-1],2):
+                    self.point[data._name]+=2
+                if round(self.MACD[data][0],2)>0:
+                    self.point[data._name]+=1
+                if round(self.DIFF[data][0],2)<=round(self.DEA[data][0],2) and round(self.DIFF[data][-1],2)>round(self.DEA[data][-1],2):
+                    self.point[data._name]-=3
+                if round(self.MACD[data][0],2)<=round(self.MACD[data][-1],2):
+                    self.point[data._name]-=2
+                if round(self.MACD[data][0],2)<=0:
+                    self.point[data._name]-=1
+                if self.EMA26[data][0]>2:
+                    self.point[data._name]+=1
+
+        scores_df=pd.DataFrame(list(self.point.items()),columns=['Stock','Score'])#记录打分表
+
+        if len(scores_df)>=2:
+        #if 1:
+            self.grading_open_long_function(scores_df)
+        #分高的执行开多
+            self.grading_open_short_function(scores_df)
+        #分低的执行开空
+            self.grading_close_function(scores_df)
         #中间的平仓'''
         
 
