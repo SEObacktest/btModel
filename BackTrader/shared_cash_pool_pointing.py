@@ -58,6 +58,8 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
         self.calculate_contribution()
         print(self.profit)
         print(self.profit_contribution)
+        print('here is report')
+        self.text_report()
 
     def notify_order(self,order):
         if self.notify_flag:
@@ -328,3 +330,20 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
         if total_profit!=0:
             for data in self.datas:
                 self.profit_contribution[data._name]=self.profit[data._name]/total_profit
+    def text_report(self):
+        print("========共享资金池打分回测========")
+        endingcash = self.getvalue()  # 获取期末权益
+        #endingcash=shared_cash_pool_pointing.Shared_Cash_Pool_Pointing.getvalue()
+        if endingcash <= 0:
+            endingcash = 0
+        # 输出期初和期末权益
+        print("期初权益：100000000")
+        print(f"期末权益：{endingcash}")
+        profit = endingcash - 100000000  # 计算收益
+        symbol_list=list(self.profit.keys())
+        print(f'品种:{symbol_list}')
+        print(f"收益:{round(profit, 2)}")
+        # 计算收益率
+        profit_percent = round((profit / 100000000)*100, 2)
+        print(f"收益率：{profit_percent}%")
+        print("========共享资金池打分回测========")
