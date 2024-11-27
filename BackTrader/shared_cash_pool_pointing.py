@@ -387,4 +387,11 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
 
         if total_profit!=0:
             for data in self.datas:
-                self.profit_contribution[data._name]=self.profit[data._name]/total_profit
+                if self.profit[data._name]>=0 and total_profit>0:
+                    self.profit_contribution[data._name]=self.profit[data._name]/total_profit
+                elif self.profit[data._name]>=0 and total_profit<0:
+                    self.profit_contribution[data._name]=abs(self.profit[data._name]/total_profit)
+                elif self.profit[data._name]<=0 and total_profit>0:
+                    self.profit_contribution[data._name]=(-1)*abs(self.profit[data._name]/total_profit)
+                elif self.profit[data._name]<=0 and total_profit<0:
+                    self.profit_contribution[data._name]=(-1)*abs(self.profit[data._name]/total_profit)
