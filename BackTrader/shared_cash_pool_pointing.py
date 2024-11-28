@@ -9,10 +9,14 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
     params = (
         ('backtest_start_date', None),
         ('backtest_end_date', None),
+        ('EMA26',None),
+        ('EMA12',None),
+        ('EMA9',None),
     )
 
     def __init__(self):
         #各种打分用的指标
+        self.init_cash=100000000
         self.cash=100000000
         self.DIFF=dict()
         self.MACD=dict()
@@ -25,15 +29,16 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
         self.target_percent=0.05
         self.start_date=dict()
         self.first_date=dict()
+        self.current_date=2000-1-1
         for data in self.datas:
             c=data.close
             self.profit[data._name]=0#各品类初始化为0
             self.profit_contribution[data._name]=0
             self.first_date[data]=None
-            self.EMA26[data]=Indicators.CustomEMA(c,period=26)
-            self.EMA12[data]=Indicators.CustomEMA(c,period=12)
+            self.EMA26[data]=Indicators.CustomEMA(c,period=self.params.EMA26)
+            self.EMA12[data]=Indicators.CustomEMA(c,period=self.params.EMA12)
             self.DIFF[data]=self.EMA12[data]-self.EMA26[data]
-            self.DEA[data] =Indicators.CustomEMA(self.DIFF[data], period=9)
+            self.DEA[data] =Indicators.CustomEMA(self.DIFF[data], period=self.params.EMA9)
             self.MACD[data]=2*(self.DIFF[data]-self.DEA[data])
 
     def prenext(self):
@@ -54,8 +59,8 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
             Log.log(self,f'今天的权益:{self.getvalue()}')
 
     def next(self):
-        current_date = self.datas[0].datetime.date(0)
-        if self.params.backtest_start_date <= current_date <= self.params.backtest_end_date:
+        self.current_date = self.datas[0].datetime.date(0)
+        if self.params.backtest_start_date <= self.current_date <= self.params.backtest_end_date:
             self.shared_cash_pointing()#执行策略
             for data in self.datas:
                 #if current_date>=self.getdatabyname(data._name).datetime.date(0):
@@ -82,6 +87,11 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
             if self.getposition(data).size!=0:
                 self.profit[data._name]+=abs(self.getposition(data).size)*abs(data.close[0])
         self.calculate_contribution()
+        
+        Log.log(self,f"期初权益:{self.init_cash},{self.params.EMA26},{self.params.EMA12},{self.params.EMA9},{self.params.backtest_start_date},{self.params.backtest_end_date}",dt=self.params.backtest_end_date)
+
+        Log.log(self,f"期末权益:{self.getvalue()},{self.params.EMA26},{self.params.EMA12},{self.params.EMA9},{self.params.backtest_start_date},{self.params.backtest_end_date}",dt=self.params.backtest_end_date)
+
         print(self.profit)
         print(self.profit_contribution)
 
@@ -395,3 +405,4 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
                     self.profit_contribution[data._name]=(-1)*abs(self.profit[data._name]/total_profit)
                 elif self.profit[data._name]<=0 and total_profit<0:
                     self.profit_contribution[data._name]=(-1)*abs(self.profit[data._name]/total_profit)
+

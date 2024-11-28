@@ -65,13 +65,34 @@ class BackTest:
         cerebro = bt.Cerebro()  # 创建Backtrader回测引擎
         cerebro.broker.set_coc(True)
         BackTestSetup.set_cerebro(cerebro=cerebro, opt_judge=False)  # 设置回测引擎
-        cerebro.addstrategy(Shared_Cash_Pool_Pointing,backtest_start_date=DataGet.get_date_from_int(start_date),backtest_end_date=DataGet.get_date_from_int(end_date))  # 添加策略（打分策略）
-        DataGet.get_fut_data(cerebro=cerebro, codes=symbol_list, start_date=start_date, end_date=end_date)  # 获取数据
-        strat = cerebro.run()[0]  # 运行回测并获取策略实例
+        DataGet.get_fut_data(cerebro=cerebro, 
+                             codes=symbol_list, 
+                             start_date=start_date, 
+                             end_date=end_date)  # 获取数据
+        '''for EMA26 in range(10,20,5):
+            for EMA12 in range(10,20,5):
+                for EMA9 in range(10,20,5):
+                    cerebro.addstrategy(Shared_Cash_Pool_Pointing,
+                            backtest_start_date=DataGet.get_date_from_int(start_date),
+                            backtest_end_date=DataGet.get_date_from_int(end_date),
+                            EMA26=EMA26,
+                            EMA12=EMA12,
+                            EMA9=EMA9)  # 添加策略（打分策略）
+                    #strat = cerebro.run()[0]  # 运行回测并获取策略实例
+                    cerebro.run()'''
+        #DataGet.get_fut_data(cerebro=cerebro, codes=symbol_list, start_date=start_date, end_date=end_date)  # 获取数据
+        cerebro.optstrategy(Shared_Cash_Pool_Pointing,
+                            backtest_start_date=DataGet.get_date_from_int(start_date),
+                            backtest_end_date=DataGet.get_date_from_int(end_date),
+                            EMA26=range(24,26),
+                            EMA12=range(11,13),
+                            EMA9=range(7,9))
+        cerebro.run()
+
         print("========共享资金池打分回测========")
         print(f"品种：{symbol_list}")
         print(f"回测区间：{DataGet.get_date_from_int(start_date)}至{DataGet.get_date_from_int(end_date)}")
-        DataIO.text_report(cerebro=cerebro, strat=strat)  # 输出回测报告
+        #DataIO.text_report(cerebro=cerebro, strat=strat)  # 输出回测报告
         print("========共享资金池打分回测========")
 
         #pic = Bokeh(style='bar', plot_mode='single', scheme=Tradimo())  # 使用Bokeh绘图
