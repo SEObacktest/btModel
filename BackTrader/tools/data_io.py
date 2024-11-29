@@ -4,12 +4,16 @@ import datetime
 from backtrader.analyzers import *
 import numpy as np
 import tools.log_func as log
-
+import config
 
 class DataIO():
     """
     数据输入输出类，提供与用户交互的功能，包括获取股票代码、选择回测指标、设置参数优化等。
     """
+
+    start_date=None
+    end_date=None
+
     def __init__(self):
         self.start_date=None
         self.end_date=None
@@ -37,19 +41,40 @@ class DataIO():
         # 登录Tushare获取数据接口
         pro = DataGet.login_ts()
         # 获取上市状态为'L'（上市）的股票基本信息
-        data = pro.fut_basic(exchange='CFFEX', fut_type=2, fields='ts_code,name,list_date,delist_date')
+        data = pro.fut_basic(exchange='CFFEX', fut_type=2, fields='ts_code,name,list_date,delist_date,multiplier,per_unit')
         # 重命名列名为中文，方便显示
-        new_col = ['code', '期货名', '上市日期','最后交易日期']
+        new_col = ['code', '期货名', '上市日期','最后交易日期','合约乘数','每手交易单位']
         data.columns = new_col
         exchange_list=['DCE','CZCE','SHFE','INE','GFEX']
         for exchange_name in exchange_list:
-            data_new = pro.fut_basic(exchange=exchange_name, fut_type=2, fields='ts_code,name,list_date,delist_date')
+            data_new = pro.fut_basic(exchange=exchange_name, fut_type=2, fields='ts_code,name,list_date,delist_date,multiplier,per_unit')
             # 重命名列名为中文，方便显示
-            new_col = ['code', '期货名', '上市日期','最后交易日期']
+            new_col = ['code', '期货名', '上市日期','最后交易日期','合约乘数','每手交易单位']
             data_new.columns = new_col
             data=pd.concat([data,data_new],axis=0)
         # 将股票列表保存为CSV文件
-        data.to_csv("future_codes.csv")
+        data.to_csv("future_codes_info.csv")
+        # 打印当前上市交易的品种列表
+        print("========交易品种列表========")
+        print(data)
+        print("================================")
+
+    def get_future_info():
+        # 登录Tushare获取数据接口
+        pro = DataGet.login_ts()
+        # 获取上市状态为'L'（上市）的股票基本信息
+        data = pro.fut_settle(exchange='CFFEX',trade_date='2024-11-25')
+        # 重命名列名为中文，方便显示
+        #new_col = ['code', '期货名', '上市日期','最后交易日期','合约乘数','每手交易单位']
+        #data.columns = new_col
+        exchange_list=['DCE','CZCE','SHFE','INE','GFEX']
+        for exchange_name in exchange_list:
+            data_new = pro.fut_settle(exchange=exchange_name,trade_date='2024-11-25')
+            #new_col = ['code', '交易日期','手续费率','买保证金率','卖保证金率']
+            #data_new.columns = new_col
+            data=pd.concat([data,data_new],axis=0)
+        # 将股票列表保存为CSV文件
+        data.to_csv("future_codes_info.csv")
         # 打印当前上市交易的品种列表
         print("========交易品种列表========")
         print(data)
@@ -153,6 +178,7 @@ class DataIO():
                     print("非法输入！请重试！！！")
                     continue
             break  # 起始日期和结束日期均输入正确，退出循环
+        
         return codes, start_date, end_date  # 返回股票代码列表和日期
     @staticmethod 
     def input_futureInformation():
@@ -218,6 +244,10 @@ class DataIO():
                     print("非法输入！请重试！！！")
                     continue
             break  # 起始日期和结束日期均输入正确，退出循环
+        DataIO.start_date=start_date
+        DataIO.end_date=end_date
+        config.start_date=start_date
+        config.end_date=end_date
         return codes, start_date, end_date  # 返回股票代码列表和日期
  
     @staticmethod
@@ -465,8 +495,6 @@ class DataIO():
             information_list = list()
             information_list.append(row['code'])  # 添加股票代码
             information_list.append(row['期货名'])
-            information_list.append(row['上市日期'])  # 添加上市日期
-            information_list.append(row['最后交易日期'])
             name_dict[row['期货名']] = information_list  # 键为股票名称，值为信息列表
         return name_dict  # 返回股票信息字典
 

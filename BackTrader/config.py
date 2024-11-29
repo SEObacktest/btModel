@@ -1,6 +1,10 @@
 import configparser
 import os
 import sys
+
+start_date=None
+end_date=None
+
 CFG_FL_PATH="../sys.cfg"
 USER_CFG_SECTION = "cerebro_config"
 class Config:

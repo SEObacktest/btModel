@@ -22,9 +22,10 @@ class BackTestSetup:
         cerebro.broker.setcommission(commission=commission)  # 设置交易手续费
 
         if not opt_judge:
+            pass
             # 如果不是优化模式，添加分析器和绘图元素
-            DataIO.add_analysers(cerebro=cerebro)       # 添加回测分析器
-            DataIO.add_plotElements(cerebro=cerebro)    # 添加绘图元素
+            #DataIO.add_analysers(cerebro=cerebro)       # 添加回测分析器
+            #DataIO.add_plotElements(cerebro=cerebro)    # 添加绘图元素
         print("数据加载中.....")
         time.sleep(2)  # 模拟数据加载时间
         if not opt_judge:

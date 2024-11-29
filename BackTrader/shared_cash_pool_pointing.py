@@ -30,6 +30,7 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
         self.start_date=dict()
         self.first_date=dict()
         self.current_date=2000-1-1
+        self.order_list=dict()
         for data in self.datas:
             c=data.close
             self.profit[data._name]=0#各品类初始化为0
@@ -40,6 +41,7 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
             self.DIFF[data]=self.EMA12[data]-self.EMA26[data]
             self.DEA[data] =Indicators.CustomEMA(self.DIFF[data], period=self.params.EMA9)
             self.MACD[data]=2*(self.DIFF[data]-self.DEA[data])
+            self.order_list[data]=[0]
 
     def prenext(self):
         current_date = self.datetime.date(0)
@@ -108,34 +110,47 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
                 if order.isbuy():  
 
                     Log.log(self,
-                    f"订单完成:买单,{data._name}, 手数:{abs(order.executed.size)},"
+                    f"订单完成:买单,{data._name}, 手数:{(order.executed.size)},"
                     f"每手价格:{order.executed.price:.2f},"
-                    f"总价格:{abs(order.executed.value):.2f},"
-                    f"手续费:{order.executed.comm:.2f}"
+                    f"总价格:{(order.executed.value):.2f},"
+                    f"手续费:{order.executed.comm:.2f},"
+                    f"该品种现有持仓:{self.getposition(data)}"
                     )
+                    self.order_list[data].append(self.getposition(data).size)
+                    if self.order_list[data][-1]>0 and self.order_list[data][-2]>=0 and self.order_list[data][-1]>self.order_list[data][-2]:
+                        self.cashflow(data,-1,order)#开多仓/加多仓
+                    
+                    if self.order_list[data][-1]<=0 and self.order_list[data][-2]<0 and self.order_list[data][-1]>self.order_list[data][-2]:
+                        self.cashflow(data,1,order)#平空仓/减空仓
                     #观察日志，发现手数和金额同号的时候是开/加仓，反之是平/减仓
-                    if (order.executed.size*order.executed.value)>0:
-                        self.cashflow(data,-1,order)
+                    #if (order.executed.size*order.executed.value)>0:
+                        #self.cashflow(data,-1,order)
                         
-                    elif (order.executed.size*order.executed.value)<0:
-                        self.cashflow(data,1,order)
-                        
+                    #elif (order.executed.size*order.executed.value)<0:
+                        #self.cashflow(data,1,order)
                     
 
                 
                 elif order.issell():
                     Log.log(self,
-                    f"订单完成:卖单,{data._name},手数:{abs(order.executed.size)},"
+                    f"订单完成:卖单,{data._name},手数:{(order.executed.size)},"
                     f"每手价格:{order.executed.price:.2f},"
-                    f"总价格:{abs(order.executed.value):.2f},"
-                    f"手续费:{order.executed.comm:.2f}"
+                    f"总价格:{(order.executed.value):.2f},"
+                    f"手续费:{order.executed.comm:.2f},"
+                    f"该品种现有持仓:{self.getposition(data)}"
                     )
+                    self.order_list[data].append(self.getposition(data).size)
+                    if self.order_list[data][-1]>=0 and self.order_list[data][-2]>0 and self.order_list[data][-1]<self.order_list[data][-2]:
+                        self.cashflow(data,1,order)#平多仓/减多仓
+                    if self.order_list[data][-1]<0 and self.order_list[data][-2]<=0 and self.order_list[data][-1]<self.order_list[data][-2]:
+                        self.cashflow(data,-1,order)#开空仓/加空仓
                     #观察日志，发现手数和金额同号的时候是开/加仓，反之是平/减仓
-                    if (order.executed.size*order.executed.value)>0:
-                        self.cashflow(data,-1,order)
+                    #if (order.executed.size*order.executed.value)>0:
+                        #self.cashflow(data,-1,order)
                         
-                    elif (order.executed.size*order.executed.value)<0:
-                        self.cashflow(data,1,order)
+                    #elif (order.executed.size*order.executed.value)<0:
+                        #self.cashflow(data,1,order)
+
     def cashflow(self,data,symbol,order):
         #通过订单和品类，改变字典中这个品类的利润
         if symbol==1:

@@ -8,6 +8,12 @@ from backtrader_plotting.schemes import Tradimo  # 导入Bokeh的绘图方案
 from shared_cash_pool import Shared_cash_pool
 from shared_cash_pool_pointing import Shared_Cash_Pool_Pointing
 from shared_cash_peak_valley import Shared_Cash_Peak_Valley
+import pandas as pd
+from backtrader.comminfo import ComminfoFuturesPercent,ComminfoFuturesFixed
+from multi import run
+from itertools import product
+from multiprocessing import Pool
+from functools import partial
 class BackTest:
     @staticmethod
     def batch_test(symbol_list, start_date, end_date):
@@ -62,32 +68,40 @@ class BackTest:
         :param start_date: 回测开始日期
         :param end_date: 回测结束日期
         """
+        info=pd.read_csv('datasets/future_codes.csv')
         cerebro = bt.Cerebro()  # 创建Backtrader回测引擎
         cerebro.broker.set_coc(True)
+        cerebro.broker.set_slippage_fixed(1)
         BackTestSetup.set_cerebro(cerebro=cerebro, opt_judge=False)  # 设置回测引擎
         DataGet.get_fut_data(cerebro=cerebro, 
                              codes=symbol_list, 
                              start_date=start_date, 
                              end_date=end_date)  # 获取数据
-        '''for EMA26 in range(10,20,5):
-            for EMA12 in range(10,20,5):
-                for EMA9 in range(10,20,5):
-                    cerebro.addstrategy(Shared_Cash_Pool_Pointing,
+        for code in symbol_list:
+            margin=info[info['code']==code]['保证金比例'].iloc[0]
+            mult=info[info['code']==code]['合约乘数'].iloc[0]
+            comm=ComminfoFuturesPercent(commission=0.0001,margin=margin,mult=mult)
+            cerebro.broker.addcommissioninfo(comm,name=code)
+        '''cerebro.optstrategy(Shared_Cash_Pool_Pointing,
                             backtest_start_date=DataGet.get_date_from_int(start_date),
                             backtest_end_date=DataGet.get_date_from_int(end_date),
-                            EMA26=EMA26,
-                            EMA12=EMA12,
-                            EMA9=EMA9)  # 添加策略（打分策略）
-                    #strat = cerebro.run()[0]  # 运行回测并获取策略实例
-                    cerebro.run()'''
-        #DataGet.get_fut_data(cerebro=cerebro, codes=symbol_list, start_date=start_date, end_date=end_date)  # 获取数据
-        cerebro.optstrategy(Shared_Cash_Pool_Pointing,
+                            EMA26=range(24,27),
+                            EMA12=range(12,15),
+                            EMA9=range(9,12))'''
+        cerebro.addstrategy(Shared_Cash_Pool_Pointing,
                             backtest_start_date=DataGet.get_date_from_int(start_date),
                             backtest_end_date=DataGet.get_date_from_int(end_date),
-                            EMA26=range(24,26),
-                            EMA12=range(11,13),
-                            EMA9=range(7,9))
-        cerebro.run()
+                            EMA26=26,
+                            EMA12=12,
+                            EMA9=9)
+        EMA26_list=range(10,20,5)
+        EMA12_list=range(8,18,5)
+        EMA9_list=range(5,15,5)
+        params_list=product(product(EMA26_list,EMA12_list),EMA9_list)
+        #params_list=product(product(params_list,starting_date),ending_date)
+        #with Pool(3) as p:
+            #results = p.map(run,params_list)
+        cerebro.run(maxcpus=1)
 
         print("========共享资金池打分回测========")
         print(f"品种：{symbol_list}")
