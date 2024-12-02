@@ -68,20 +68,24 @@ class BackTest:
         :param start_date: 回测开始日期
         :param end_date: 回测结束日期
         """
-        info=pd.read_csv('datasets/future_codes.csv')
+        info=pd.read_csv('datasets/future_codes.csv')#读取合约信息，保证金比例，手续费比例
         cerebro = bt.Cerebro()  # 创建Backtrader回测引擎
-        cerebro.broker.set_coc(True)
-        cerebro.broker.set_slippage_fixed(1)
+        cerebro.broker.set_coc(True)#启用未来数据
+        cerebro.broker.set_slippage_fixed(1)#固定滑点为1
         BackTestSetup.set_cerebro(cerebro=cerebro, opt_judge=False)  # 设置回测引擎
         DataGet.get_fut_data(cerebro=cerebro, 
                              codes=symbol_list, 
                              start_date=start_date, 
                              end_date=end_date)  # 获取数据
         for code in symbol_list:
-            margin=info[info['code']==code]['保证金比例'].iloc[0]
-            mult=info[info['code']==code]['合约乘数'].iloc[0]
+            margin=info[info['code']==code]['保证金比例'].iloc[0]#从DataFrame里面取得保证金
+            mult=info[info['code']==code]['合约乘数'].iloc[0]#从DataFrame里面取得合约乘数
             comm=ComminfoFuturesPercent(commission=0.0001,margin=margin,mult=mult)
+            #把手续费、保证金和合约乘数打包作为一个整体参数，注意这里的
+            #ComminfoFuturesPercent是在库里面重写的方法，源码要在CSDN
+            #上看
             cerebro.broker.addcommissioninfo(comm,name=code)
+            #设定参数
         '''cerebro.optstrategy(Shared_Cash_Pool_Pointing,
                             backtest_start_date=DataGet.get_date_from_int(start_date),
                             backtest_end_date=DataGet.get_date_from_int(end_date),
@@ -94,14 +98,16 @@ class BackTest:
                             EMA26=26,
                             EMA12=12,
                             EMA9=9)
-        EMA26_list=range(10,20,5)
-        EMA12_list=range(8,18,5)
-        EMA9_list=range(5,15,5)
-        params_list=product(product(EMA26_list,EMA12_list),EMA9_list)
+        #创建策略，传递参数：开始日期、结束日期、均线长度
+        #EMA26_list=range(10,20,5)#接下来几行是预备多线并发的参数优化，可以忽略
+        #EMA12_list=range(8,18,5)
+        #EMA9_list=range(5,15,5)
+        #params_list=product(product(EMA26_list,EMA12_list),EMA9_list)
         #params_list=product(product(params_list,starting_date),ending_date)
         #with Pool(3) as p:
             #results = p.map(run,params_list)
-        cerebro.run(maxcpus=1)
+        
+        cerebro.run(maxcpus=1)#运行回测，只用一个CPU核，避免线程错乱
 
         print("========共享资金池打分回测========")
         print(f"品种：{symbol_list}")

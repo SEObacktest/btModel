@@ -6,6 +6,7 @@ import pandas as pd
 import Indicators
 import datetime
 class Shared_Cash_Pool_Pointing(bt.Strategy):
+    #初始化参数，这些参数在策略被实例化的实话会重新通过实参传入
     params = (
         ('backtest_start_date', None),
         ('backtest_end_date', None),
@@ -16,22 +17,22 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
 
     def __init__(self):
         #各种打分用的指标
-        self.init_cash=100000000
-        self.cash=100000000
-        self.DIFF=dict()
-        self.MACD=dict()
-        self.notify_flag=1
+        self.init_cash=100000000#初始资金
+        self.cash=100000000#初始资金
+        self.DIFF=dict()#MACD策略当中的DIFF指标
+        self.MACD=dict()#MACD策略当中的MACD指标
+        self.notify_flag=1#控制订单打印的BOOL变量
         self.profit=dict()#分品类保存利润的字典
-        self.profit_contribution=dict()
-        self.EMA26=dict()
-        self.EMA12=dict()
-        self.DEA=dict()
-        self.target_percent=0.05
+        self.profit_contribution=dict()#分品类保存利润贡献度的字典
+        self.EMA26=dict()#分品类保存26日均线
+        self.EMA12=dict()#分品类保存12日均线
+        self.DEA=dict()#MACD策略当中的DEA指标
+        self.target_percent=0.05#调整仓位的比例
         self.start_date=dict()
         self.first_date=dict()
         self.current_date=2000-1-1
-        self.order_list=dict()
-        for data in self.datas:
+        self.order_list=dict()#订单记录
+        for data in self.datas:#每个品类都需要初始化一次
             c=data.close
             self.profit[data._name]=0#各品类初始化为0
             self.profit_contribution[data._name]=0
@@ -44,10 +45,17 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
             self.order_list[data]=[0]
 
     def prenext(self):
-        current_date = self.datetime.date(0)
+        #prenext模块，这个模块用来执行当“只有部分品种有数据”的时候的回测。
+        #举个例子，A品种从1月1号开始有数据，B品种从3月1号开始有数据。
+        #回测从1月1号开始，我们当然希望从1月1号开始先回测A品种，等3月1号开始
+        #再把B品种加进来，这种有数据断层的时间我们就要通过prenext来执行
+
+        current_date = self.datetime.date(0)#获取回测当天的时间(模拟时间)
+        #如果模拟时间在回测区间内
         if self.params.backtest_start_date <= current_date <= self.params.backtest_end_date:
-            self.shared_cash_pointing_prenext()
-            for data in self.datas:
+            self.shared_cash_pointing_prenext()#执行具体的策略
+            for data in self.datas:#遍历每个品种
+                #这一行目前有争议，逻辑不清，但是可以实现功能，先保留
                 if current_date>=self.getdatabyname(data._name).datetime.date(0):
                     Log.log(self,f'{data._name}的收盘价:{data.close[0]}')
                     Log.log(self,f'{data._name}的指标,EMA26:{self.EMA26[data][0]},')
@@ -55,15 +63,20 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
                     Log.log(self,f'{data._name}的指标,DIFF:{self.DIFF[data][0]},')
                     Log.log(self,f'{data._name}的指标,DEA:{self.DEA[data][0]},')
                     Log.log(self,f'{data._name}的指标,MACD:{self.MACD[data][0]},')
-    
+                    #输出各种指标
             Log.log(self,f'今天的可用资金:{self.cash}')
             print(self.profit)
             Log.log(self,f'今天的权益:{self.getvalue()}')
 
     def next(self):
+        #next模块，接上面的例子，从3月1号开始A和B都有数据了，那么就开始执行next模块
+        #prenext模块和next模块是循环执行的，这个策略是日线模型，那么就是每天执行一次
         self.current_date = self.datas[0].datetime.date(0)
+        #获取模拟时间
         if self.params.backtest_start_date <= self.current_date <= self.params.backtest_end_date:
+            #同上
             self.shared_cash_pointing()#执行策略
+            #同上
             for data in self.datas:
                 #if current_date>=self.getdatabyname(data._name).datetime.date(0):
                 #if current_date>=self.start_date[data]:
@@ -75,8 +88,9 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
                     Log.log(self,f'{data._name}的指标,DEA:{self.DEA[data][0]},')
                     Log.log(self,f'{data._name}的指标,MACD:{self.MACD[data][0]},')
                     hold_equity=self.getposition(data).size*data.close[0]
+                    #持仓权益：仓位(手数)*当天收盘价
                     Log.log(self,f'{data._name}的权益:{abs(hold_equity)}')
-
+                    #同上
                 #else:
                     #continue
             Log.log(self,f'今天的可用资金:{self.cash}')
@@ -84,11 +98,17 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
             Log.log(self,f'今天的权益:{self.getvalue()}')
 
     def stop(self):
+        #stop模块，在最后一天结束后执行，整个回测过程只执行一次
         #最后一天结束后，把持仓品类的权益释放出来加到各个品种利润上面
-        for data in self.datas:
-            if self.getposition(data).size!=0:
+        #考虑我们计算每个品种利润的方式，初始的时候，利润是0，如果有开仓，就减掉开仓成本，如果有
+        #平仓，就加上平仓收益，由于到了最后一天可能上一笔开仓未平，我们要把这最后一笔开仓成本
+        #通过当天(最后一天)的收盘价释放出来，实际上就是一个模拟平仓的过程
+        for data in self.datas:#遍历所有品种
+            if self.getposition(data).size!=0:#如果有持仓
                 self.profit[data._name]+=abs(self.getposition(data).size)*abs(data.close[0])
+                #调整利润
         self.calculate_contribution()
+        #计算各个品种对于总利润的贡献
         
         Log.log(self,f"期初权益:{self.init_cash},{self.params.EMA26},{self.params.EMA12},{self.params.EMA9},{self.params.backtest_start_date},{self.params.backtest_end_date}",dt=self.params.backtest_end_date)
 
@@ -98,7 +118,8 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
         print(self.profit_contribution)
 
     def notify_order(self,order):
-        if self.notify_flag:
+        #在一笔订单完成后输出有关于这笔订单的信息，这部分也可参照BackTrader源文档，因为写法基本固定
+        if self.notify_flag:#控制订单打印的BOOL变量为真
             data=order.data#获取这笔订单对应的品类
             if order is None:
                 Log.log(self,f'Receive a none order')
@@ -107,7 +128,7 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
                 return
             if order.status in [order.Completed]:
                 
-                if order.isbuy():  
+                if order.isbuy():#如果是买单，注意买单分四种：开多/加多/平空/减空
 
                     Log.log(self,
                     f"订单完成:买单,{data._name}, 手数:{(order.executed.size)},"
@@ -117,11 +138,17 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
                     f"该品种现有持仓:{self.getposition(data)}"
                     )
                     self.order_list[data].append(self.getposition(data).size)
+                    #order_list[data]记载了data这个品类每笔交易上持仓数量的变化
+                    #方便我们判断开平仓
+                    #注意在BackTrader系统当中，空头的持仓为负数
                     if self.order_list[data][-1]>0 and self.order_list[data][-2]>=0 and self.order_list[data][-1]>self.order_list[data][-2]:
-                        self.cashflow(data,-1,order)#开多仓/加多仓
+                    #如果现在和这笔订单完成之前，持仓都为正，且现在比之前更大，那么就是开多仓/加多仓
+                        self.cashflow(data,-1,order)#调整可用现金
                     
                     if self.order_list[data][-1]<=0 and self.order_list[data][-2]<0 and self.order_list[data][-1]>self.order_list[data][-2]:
-                        self.cashflow(data,1,order)#平空仓/减空仓
+                    #如果现在和这笔订单完成之前，持仓都为负，且现在比之前更大，那么就是平空仓/减空仓
+                        self.cashflow(data,1,order)#调整可用现金
+
                     #观察日志，发现手数和金额同号的时候是开/加仓，反之是平/减仓
                     #if (order.executed.size*order.executed.value)>0:
                         #self.cashflow(data,-1,order)
@@ -131,7 +158,7 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
                     
 
                 
-                elif order.issell():
+                elif order.issell():#卖单的情况，同上
                     Log.log(self,
                     f"订单完成:卖单,{data._name},手数:{(order.executed.size)},"
                     f"每手价格:{order.executed.price:.2f},"
@@ -153,7 +180,7 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
 
     def cashflow(self,data,symbol,order):
         #通过订单和品类，改变字典中这个品类的利润
-        if symbol==1:
+        if symbol==1:#symbol用来判断是开/平，从而确定利润改变的方向：增/减
             self.profit[data._name]+=abs(order.executed.value)
             #通过executed.value来加减利润
             Log.log(self,f'品类:{data._name}的利润增加额:{abs(order.executed.value)}')
@@ -172,22 +199,31 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
             if 1:
                 self.point[data._name]=0
                 if round(self.DIFF[data][0],2)>round(self.DEA[data][0],2) and round(self.DIFF[data][-1],2)<=round(self.DEA[data][-1],2):
+                    #MACD金叉，加三分
                     self.point[data._name]+=3
                 if round(self.MACD[data][0],2)>round(self.MACD[data][-1],2):
+                    #MACD值比上一个交易日大，加两分
                     self.point[data._name]+=2
                 if round(self.MACD[data][0],2)>0:
+                    #MACD值大于0，加一分
                     self.point[data._name]+=1
+
                 if round(self.DIFF[data][0],2)<=round(self.DEA[data][0],2) and round(self.DIFF[data][-1],2)>round(self.DEA[data][-1],2):
+                    #MACD死叉，减三分
                     self.point[data._name]-=3
                 if round(self.MACD[data][0],2)<=round(self.MACD[data][-1],2):
+                    #MACD值比上一个交易日小，减两分
                     self.point[data._name]-=2
                 if round(self.MACD[data][0],2)<=0:
+                    #MACD值大于0，减少一分
                     self.point[data._name]-=1
+
                 if self.EMA26[data][0]>2:
+                    #修正项，如果26日均线>2就加一分
                     self.point[data._name]+=1
 
         scores_df=pd.DataFrame(list(self.point.items()),columns=['Stock','Score'])#记录打分表
-        if len(scores_df)>=2:
+        if len(scores_df)>=2:#至少要有两个品种这个共享回测才有意义
         #if 1:
             self.grading_open_long_function(scores_df)
         #分高的执行开多
@@ -198,6 +234,7 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
         
 
     def shared_cash_pointing_prenext(self):#具体的策略（打分方式是随便写的）
+        #这个是专门给prenext模块用的，逻辑和上面的一样
         self.point=dict()#字典当打分表，记录每个品种的打分情况
         current_date=self.datetime.date(0)
         for data in self.datas:#满足一个指标就加一分
@@ -310,12 +347,14 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
                     order=self.close(data=close_data)
     
     def calculate_quantity(self, st:bt.Strategy,line:bt.DataSeries) -> int:
+        #计算手数，手数=可用资金*0.05/当日收盘价
         available_cash=self.cash*0.05
         close_price=line.close[0]
         quantity=int(available_cash/close_price)
         return quantity
     
     def rebalance_long_positions(self,specific_assets):#给多头调仓
+        #保证我们的每个品种多头权益(如果他是多头的话)始终占总权益的5%
         self.target_percent=0.05
         Log.log(self,f"检查现有多头持仓")
         current_value=self.cash#现有权益
@@ -346,6 +385,7 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
 
                 
     def rebalance_short_positions(self, specific_assets):#给空头调仓
+        #同上
         Log.log(self,f"检查现有空头持仓")  # 记录开始检查空头仓位的日志
         current_value=self.getvalue()  # 获取当前投资组合的总价值
         Log.log(self,f"总权益:{current_value:.2f}")  # 记录当前投资组合的总价值
@@ -377,6 +417,7 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
 
 
     def allocate_proceeds(self,proceeds,sold_data):#均分策略
+        #老版本的策略，可以忽略
         held_assets=[data for data in self.datas if self.getposition(data).size>0 and data!=sold_data]
         num_held=len(held_assets)
 
@@ -398,7 +439,7 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
                 Log.log(self,f'Insufficient allocation for {data._name},Allocation:{allocation_per_asset:.2f},Price:{data.close[0]:.2f}')
 
     def getvalue(self):
-        
+        #很粗糙的自己写的一个getvalue方法，权益=可用现金+所有品种持仓权益
         value=self.cash
         for data in self.datas:
             value+=abs(data.close[0]*self.getposition(data).size)
@@ -406,6 +447,7 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
         return value
     
     def calculate_contribution(self):
+        #计算品种贡献度，其实就是每个品种的利润/总利润(注意下正负号就行)
         total_profit=0
         for data in self.datas:
             total_profit+=abs(self.profit[data._name])
