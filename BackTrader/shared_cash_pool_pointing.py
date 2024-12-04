@@ -17,7 +17,7 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
 
     def __init__(self):
         #各种打分用的指标
-        columns = ['时间', '合约名', '信号', '单价', '手数', '总价', '手续费', '可用资金', '总权益']
+        columns = ['时间', '合约名', '信号', '单价', '手数', '总价', '手续费', '可用资金', '总权益','本笔浮盈']
         self.num_of_trade=0#总交易次数
         self.info=pd.DataFrame(columns=columns)#记录总的订单信息，信号明细
         self.info.index=range(1,len(self.info)+1)
@@ -36,6 +36,7 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
         self.first_date=dict()
         self.current_date=2000-1-1
         self.order_list=dict()#订单记录
+        self.paper_profit=dict()
         for data in self.datas:#每个品类都需要初始化一次
             c=data.close
             self.profit[data._name]=0#各品类初始化为0
@@ -47,6 +48,7 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
             self.DEA[data] =Indicators.CustomEMA(self.DIFF[data], period=self.params.EMA9)
             self.MACD[data]=2*(self.DIFF[data]-self.DEA[data])
             self.order_list[data]=[0]
+            self.paper_profit[data]=0
 
     def prenext(self):
         #prenext模块，这个模块用来执行当“只有部分品种有数据”的时候的回测。
@@ -77,7 +79,7 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
         #prenext模块和next模块是循环执行的，这个策略是日线模型，那么就是每天执行一次
         self.current_date = self.datas[0].datetime.date(0)
         #获取模拟时间
-        if self.params.backtest_start_date <= self.current_date <= self.params.backtest_end_date:
+        if self.params.backtest_start_date <= self.current_date < self.params.backtest_end_date:
             #同上
             self.shared_cash_pointing()#执行策略
             #同上
@@ -107,10 +109,10 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
         #考虑我们计算每个品种利润的方式，初始的时候，利润是0，如果有开仓，就减掉开仓成本，如果有
         #平仓，就加上平仓收益，由于到了最后一天可能上一笔开仓未平，我们要把这最后一笔开仓成本
         #通过当天(最后一天)的收盘价释放出来，实际上就是一个模拟平仓的过程
-        for data in self.datas:#遍历所有品种
+        '''for data in self.datas:#遍历所有品种
             if self.getposition(data).size!=0:#如果有持仓
                 self.profit[data._name]+=abs(self.getposition(data).size)*abs(data.close[0])
-                #调整利润
+                #调整利润'''
         self.calculate_contribution()
         #计算各个品种对于总利润的贡献
         
@@ -133,6 +135,8 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
             trade_nums=order.executed.size#手数
             trade_value=order.executed.value#总价
             trade_comm=order.executed.comm
+
+
             if order is None:
                 Log.log(self,f'Receive a none order')
                 return
@@ -160,8 +164,14 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
                         total_value=self.getvalue()
                         if self.order_list[data][-2]==0:#开多仓
                             trade_type="开多仓"
+                            self.paper_profit[data]=0
+                            self.paper_profit[data]-=(abs(order.executed.value)+abs(order.executed.comm))
+                            #记录浮盈
                         else:
                             trade_type="加多仓"
+                            self.paper_profit[data]-=(abs(order.executed.value)+abs(order.executed.comm))
+                            #记录浮盈
+
                     if self.order_list[data][-1]<=0 and self.order_list[data][-2]<0 and self.order_list[data][-1]>self.order_list[data][-2]:
                     #如果现在和这笔订单完成之前，持仓都为负，且现在比之前更大，那么就是平空仓/减空仓
                         self.cashflow(data,1,order)#调整可用现金
@@ -169,9 +179,11 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
                         total_value=self.getvalue()
                         if self.order_list[data][-1]==0:#平空仓
                             trade_type="平空仓"
+                            self.paper_profit[data]=self.paper_profit[data]+abs(order.executed.value)-order.executed.comm
+                            #记录浮盈
                         else:
                             trade_type="减空仓"
-
+                            self.paper_profit[data]=self.paper_profit[data]+abs(order.executed.value)-order.executed.comm
                     #观察日志，发现手数和金额同号的时候是开/加仓，反之是平/减仓
                     #if (order.executed.size*order.executed.value)>0:
                         #self.cashflow(data,-1,order)
@@ -196,16 +208,23 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
                         total_value=self.getvalue()
                         if self.order_list[data][-1]==0:#平多仓
                             trade_type="平多仓"
+                            self.paper_profit[data]=self.paper_profit[data]+abs(order.executed.value)-order.executed.comm
+                            #记录浮盈
                         else:
                             trade_type="减多仓"
+                            self.paper_profit[data]=self.paper_profit[data]+abs(order.executed.value)-order.executed.comm
+                            #记录浮盈
                     if self.order_list[data][-1]<0 and self.order_list[data][-2]<=0 and self.order_list[data][-1]<self.order_list[data][-2]:
                         self.cashflow(data,-1,order)#开空仓/加空仓
                         available_cash=self.cash#调整后获取现金
                         total_value=self.getvalue()
                         if self.order_list[data][-2]==0:
                             trade_type="开空仓"
+                            self.paper_profit[data]
+                            self.paper_profit[data]-=(abs(order.executed.value)+abs(order.executed.comm))
                         else:
                             trade_type="加空仓"
+                            self.paper_profit[data]-=(abs(order.executed.value)+abs(order.executed.comm))
 
 
                     #观察日志，发现手数和金额同号的时候是开/加仓，反之是平/减仓
@@ -215,8 +234,9 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
                     #elif (order.executed.size*order.executed.value)<0:
                         #self.cashflow(data,1,order)
 
-                self.info.loc[self.num_of_trade]=[current_time,dataname,trade_type,unit_price,trade_nums,trade_value,trade_comm,available_cash,total_value]
+                self.info.loc[self.num_of_trade]=[current_time,dataname,trade_type,unit_price,trade_nums,trade_value,trade_comm,available_cash,total_value,self.paper_profit[data]]
                 self.num_of_trade+=1#交易次数+1
+
     def cashflow(self,data,symbol,order):
         #通过订单和品类，改变字典中这个品类的利润
         if symbol==1:#symbol用来判断是开/平，从而确定利润改变的方向：增/减
