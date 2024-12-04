@@ -123,100 +123,176 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
         self.info.to_csv('signal_info.csv',index=True,mode='w',encoding='utf-8')
 
 
-    def notify_order(self,order):
-        #在一笔订单完成后输出有关于这笔订单的信息，这部分也可参照BackTrader源文档，因为写法基本固定
-        if self.notify_flag:#控制订单打印的BOOL变量为真
-            data=order.data#获取这笔订单对应的品类
-            current_time=self.datetime.date(0)#时间
-            dataname=order.data._name#合约名称
-            unit_price=order.executed.price#单价
-            trade_nums=order.executed.size#手数
-            trade_value=order.executed.value#总价
-            trade_comm=order.executed.comm
-            if order is None:
-                Log.log(self,f'Receive a none order')
-                return
-            if order.status in [order.Submitted, order.Accepted]:
-                return
-            if order.status in [order.Completed]:
-                
-                if order.isbuy():#如果是买单，注意买单分四种：开多/加多/平空/减空
+    # def notify_order(self,order):
+    #     #在一笔订单完成后输出有关于这笔订单的信息，这部分也可参照BackTrader源文档，因为写法基本固定
+    #     if self.notify_flag:#控制订单打印的BOOL变量为真
+    #         data=order.data#获取这笔订单对应的品类
+    #         current_time=self.datetime.date(0)#时间
+    #         dataname=order.data._name#合约名称
+    #         unit_price=order.executed.price#单价
+    #         trade_nums=order.executed.size#手数
+    #         trade_value=order.executed.value#总价
+    #         trade_comm=order.executed.comm
+    #         if order is None:
+    #             Log.log(self,f'Receive a none order')
+    #             return
+    #         if order.status in [order.Submitted, order.Accepted]:
+    #             return
+    #         if order.status in [order.Completed]:
+    #
+    #             if order.isbuy():#如果是买单，注意买单分四种：开多/加多/平空/减空
+    #
+    #                 Log.log(self,
+    #                 f"订单完成:买单,{data._name}, 手数:{(order.executed.size)},"
+    #                 f"每手价格:{order.executed.price:.2f},"
+    #                 f"总价格:{(order.executed.value):.2f},"
+    #                 f"手续费:{order.executed.comm:.2f},"
+    #                 f"该品种现有持仓:{self.getposition(data)}"
+    #                 )
+    #                 self.order_list[data].append(self.getposition(data).size)
+    #                 #order_list[data]记载了data这个品类每笔交易上持仓数量的变化
+    #                 #方便我们判断开平仓
+    #                 #注意在BackTrader系统当中，空头的持仓为负数
+    #                 if self.order_list[data][-1]>0 and self.order_list[data][-2]>=0 and self.order_list[data][-1]>self.order_list[data][-2]:
+    #                 #如果现在和这笔订单完成之前，持仓都为正，且现在比之前更大，那么就是开多仓/加多仓
+    #                     self.cashflow(data,-1,order)#调整可用现金
+    #                     available_cash=self.cash#调整后获取现金
+    #                     total_value=self.getvalue()
+    #                     if self.order_list[data][-2]==0:#开多仓
+    #                         trade_type="开多仓"
+    #                     else:
+    #                         trade_type="加多仓"
+    #                 if self.order_list[data][-1]<=0 and self.order_list[data][-2]<0 and self.order_list[data][-1]>self.order_list[data][-2]:
+    #                 #如果现在和这笔订单完成之前，持仓都为负，且现在比之前更大，那么就是平空仓/减空仓
+    #                     self.cashflow(data,1,order)#调整可用现金
+    #                     available_cash=self.cash#调整后获取现金
+    #                     total_value=self.getvalue()
+    #                     if self.order_list[data][-1]==0:#平空仓
+    #                         trade_type="平空仓"
+    #                     else:
+    #                         trade_type="减空仓"
+    #
+    #                 #观察日志，发现手数和金额同号的时候是开/加仓，反之是平/减仓
+    #                 #if (order.executed.size*order.executed.value)>0:
+    #                     #self.cashflow(data,-1,order)
+    #
+    #                 #elif (order.executed.size*order.executed.value)<0:
+    #                     #self.cashflow(data,1,order)
+    #
+    #
+    #
+    #             elif order.issell():#卖单的情况，同上
+    #                 Log.log(self,
+    #                 f"订单完成:卖单,{data._name},手数:{(order.executed.size)},"
+    #                 f"每手价格:{order.executed.price:.2f},"
+    #                 f"总价格:{(order.executed.value):.2f},"
+    #                 f"手续费:{order.executed.comm:.2f},"
+    #                 f"该品种现有持仓:{self.getposition(data)}"
+    #                 )
+    #                 self.order_list[data].append(self.getposition(data).size)
+    #                 if self.order_list[data][-1]>=0 and self.order_list[data][-2]>0 and self.order_list[data][-1]<self.order_list[data][-2]:
+    #                     self.cashflow(data,1,order)#平多仓/减多仓
+    #                     available_cash=self.cash#调整后获取现金
+    #                     total_value=self.getvalue()
+    #                     if self.order_list[data][-1]==0:#平多仓
+    #                         trade_type="平多仓"
+    #                     else:
+    #                         trade_type="减多仓"
+    #                 if self.order_list[data][-1]<0 and self.order_list[data][-2]<=0 and self.order_list[data][-1]<self.order_list[data][-2]:
+    #                     self.cashflow(data,-1,order)#开空仓/加空仓
+    #                     available_cash=self.cash#调整后获取现金
+    #                     total_value=self.getvalue()
+    #                     if self.order_list[data][-2]==0:
+    #                         trade_type="开空仓"
+    #                     else:
+    #                         trade_type="加空仓"
+    #
+    #
+    #                 #观察日志，发现手数和金额同号的时候是开/加仓，反之是平/减仓
+    #                 #if (order.executed.size*order.executed.value)>0:
+    #                     #self.cashflow(data,-1,order)
+    #
+    #                 #elif (order.executed.size*order.executed.value)<0:
+    #                     #self.cashflow(data,1,order)
+    #
+    #             self.info.loc[self.num_of_trade]=[current_time,dataname,trade_type,unit_price,trade_nums,trade_value,trade_comm,available_cash,total_value]
+    #             self.num_of_trade+=1#交易次数+1
 
-                    Log.log(self,
-                    f"订单完成:买单,{data._name}, 手数:{(order.executed.size)},"
-                    f"每手价格:{order.executed.price:.2f},"
-                    f"总价格:{(order.executed.value):.2f},"
-                    f"手续费:{order.executed.comm:.2f},"
-                    f"该品种现有持仓:{self.getposition(data)}"
-                    )
-                    self.order_list[data].append(self.getposition(data).size)
-                    #order_list[data]记载了data这个品类每笔交易上持仓数量的变化
-                    #方便我们判断开平仓
-                    #注意在BackTrader系统当中，空头的持仓为负数
-                    if self.order_list[data][-1]>0 and self.order_list[data][-2]>=0 and self.order_list[data][-1]>self.order_list[data][-2]:
-                    #如果现在和这笔订单完成之前，持仓都为正，且现在比之前更大，那么就是开多仓/加多仓
-                        self.cashflow(data,-1,order)#调整可用现金
-                        available_cash=self.cash#调整后获取现金
-                        total_value=self.getvalue()
-                        if self.order_list[data][-2]==0:#开多仓
-                            trade_type="开多仓"
-                        else:
-                            trade_type="加多仓"
-                    if self.order_list[data][-1]<=0 and self.order_list[data][-2]<0 and self.order_list[data][-1]>self.order_list[data][-2]:
-                    #如果现在和这笔订单完成之前，持仓都为负，且现在比之前更大，那么就是平空仓/减空仓
-                        self.cashflow(data,1,order)#调整可用现金
-                        available_cash=self.cash#调整后获取现金
-                        total_value=self.getvalue()
-                        if self.order_list[data][-1]==0:#平空仓
-                            trade_type="平空仓"
-                        else:
-                            trade_type="减空仓"
+    def notify_order(self, order):
+        if not self.notify_flag or order is None:
+            Log.log(self, f'Receive a none order')
+            return
 
-                    #观察日志，发现手数和金额同号的时候是开/加仓，反之是平/减仓
-                    #if (order.executed.size*order.executed.value)>0:
-                        #self.cashflow(data,-1,order)
-                        
-                    #elif (order.executed.size*order.executed.value)<0:
-                        #self.cashflow(data,1,order)
-                    
+        if order.status in [order.Submitted, order.Accepted]:
+            return
 
-                
-                elif order.issell():#卖单的情况，同上
-                    Log.log(self,
-                    f"订单完成:卖单,{data._name},手数:{(order.executed.size)},"
-                    f"每手价格:{order.executed.price:.2f},"
-                    f"总价格:{(order.executed.value):.2f},"
-                    f"手续费:{order.executed.comm:.2f},"
-                    f"该品种现有持仓:{self.getposition(data)}"
-                    )
-                    self.order_list[data].append(self.getposition(data).size)
-                    if self.order_list[data][-1]>=0 and self.order_list[data][-2]>0 and self.order_list[data][-1]<self.order_list[data][-2]:
-                        self.cashflow(data,1,order)#平多仓/减多仓
-                        available_cash=self.cash#调整后获取现金
-                        total_value=self.getvalue()
-                        if self.order_list[data][-1]==0:#平多仓
-                            trade_type="平多仓"
-                        else:
-                            trade_type="减多仓"
-                    if self.order_list[data][-1]<0 and self.order_list[data][-2]<=0 and self.order_list[data][-1]<self.order_list[data][-2]:
-                        self.cashflow(data,-1,order)#开空仓/加空仓
-                        available_cash=self.cash#调整后获取现金
-                        total_value=self.getvalue()
-                        if self.order_list[data][-2]==0:
-                            trade_type="开空仓"
-                        else:
-                            trade_type="加空仓"
+        data = order.data
+        current_time = self.datetime.date(0)
+        dataname = data._name if data else 'Unknown'
+        unit_price = order.executed.price if hasattr(order, 'executed') and order.executed else None
+        trade_nums = order.executed.size if hasattr(order, 'executed') and order.executed else None
+        trade_value = order.executed.value if hasattr(order, 'executed') and order.executed else None
+        trade_comm = order.executed.comm if hasattr(order, 'executed') and order.executed else None
+        position_size = self.getposition(data).size if data else 0
 
+        # 初始化 trade_type，默认为未知
+        trade_type = "未知"
 
-                    #观察日志，发现手数和金额同号的时候是开/加仓，反之是平/减仓
-                    #if (order.executed.size*order.executed.value)>0:
-                        #self.cashflow(data,-1,order)
-                        
-                    #elif (order.executed.size*order.executed.value)<0:
-                        #self.cashflow(data,1,order)
+        if order.status in [order.Completed]:
+            prev_position = self.order_list.get(dataname, []).copy()
+            self.order_list.setdefault(dataname, []).append(position_size)
 
-                self.info.loc[self.num_of_trade]=[current_time,dataname,trade_type,unit_price,trade_nums,trade_value,trade_comm,available_cash,total_value]
-                self.num_of_trade+=1#交易次数+1
+            if order.isbuy():
+                action = '买入'
+                if not prev_position or (prev_position[-1] == 0 and position_size > 0):
+                    trade_type = "开多仓"
+                elif prev_position and prev_position[-1] < position_size:
+                    trade_type = "加多仓"
+                elif prev_position and prev_position[-1] >= 0 and position_size < prev_position[-1]:
+                    trade_type = "减多仓"
+                elif prev_position and prev_position[-1] < 0 and position_size >= prev_position[-1]:
+                    trade_type = "平空仓" if position_size == 0 else "减空仓"
+            elif order.issell():
+                action = '卖出'
+                if not prev_position or (prev_position[-1] == 0 and position_size < 0):
+                    trade_type = "开空仓"
+                elif prev_position and prev_position[-1] > position_size:
+                    trade_type = "加空仓"
+                elif prev_position and prev_position[-1] <= 0 and position_size > prev_position[-1]:
+                    trade_type = "减空仓"
+                elif prev_position and prev_position[-1] > 0 and position_size <= prev_position[-1]:
+                    trade_type = "平多仓" if position_size == 0 else "减多仓"
+
+            # 如果没有匹配到任何情况，设置默认值
+            if trade_type == "未知":
+                Log.log(self, f'无法确定交易类型: {order}')
+
+            # 调整可用现金并获取更新后的现金和总价值
+            cash_factor = -1 if action == '买入' else 1
+            if unit_price is not None and trade_nums is not None:
+                self.cashflow(data, cash_factor, order)
+                available_cash = self.cash
+                total_value = self.getvalue()
+
+                # 日志记录
+                Log.log(self,
+                        f"订单完成: {action}, {dataname}, 手数: {trade_nums}, "
+                        f"每手价格: {unit_price:.2f}, 总价格: {trade_value:.2f}, "
+                        f"手续费: {trade_comm:.2f}, 现有持仓: {position_size}"
+                        )
+
+                # 更新交易记录
+                self.info.loc[self.num_of_trade] = [
+                    current_time, dataname, trade_type, unit_price, trade_nums,
+                    trade_value, trade_comm, available_cash, total_value
+                ]
+                self.num_of_trade += 1
+            else:
+                Log.log(self, f'Order details missing for {dataname}: {order}')
+
+        elif order.status in [order.Canceled, order.Margin, order.Rejected]:
+            Log.log(self, f'Order Canceled/Margin/Rejected: {order}')
+
     def cashflow(self,data,symbol,order):
         #通过订单和品类，改变字典中这个品类的利润
         if symbol==1:#symbol用来判断是开/平，从而确定利润改变的方向：增/减
