@@ -1,5 +1,7 @@
 import backtrader as bt
 from backtrader.indicators import *
+import backtrader as bt
+from backtrader.indicators import *
 from strategies import SharedLogic
 from tools import Log 
 import pandas as pd
@@ -17,8 +19,9 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
 
     def __init__(self):
         #各种打分用的指标
-        columns = ['时间', '合约名', '信号', '单价', '手数', '总价', '手续费', '可用资金', '总权益','本笔浮盈']
+        columns = ['时间', '合约名', '信号', '单价', '手数', '总价', '手续费', '可用资金','开仓均价']
         self.num_of_trade=0#总交易次数
+        self.log=dict()#在同一笔交易上记录信息
         self.info=pd.DataFrame(columns=columns)#记录总的订单信息，信号明细
         self.info.index=range(1,len(self.info)+1)
         self.init_cash=100000000#初始资金
@@ -37,6 +40,8 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
         self.current_date=2000-1-1
         self.order_list=dict()#订单记录
         self.paper_profit=dict()
+        self.average_open_cost=dict()
+
         for data in self.datas:#每个品类都需要初始化一次
             c=data.close
             self.profit[data._name]=0#各品类初始化为0
@@ -49,6 +54,8 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
             self.MACD[data]=2*(self.DIFF[data]-self.DEA[data])
             self.order_list[data]=[0]
             self.paper_profit[data]=0
+            self.log[data]=0
+            self.average_open_cost[data]=0
 
     def prenext(self):
         #prenext模块，这个模块用来执行当“只有部分品种有数据”的时候的回测。
@@ -71,15 +78,19 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
                     Log.log(self,f'{data._name}的指标,MACD:{self.MACD[data][0]},')
                     #输出各种指标
             Log.log(self,f'今天的可用资金:{self.cash}')
+            #Log.log(self,f'今天的可用资金:{self.broker.get_cash()}')
             print(self.profit)
             Log.log(self,f'今天的权益:{self.getvalue()}')
+            #Log.log(self,f'今天的权益:{self.broker.get_value()}')
 
     def next(self):
         #next模块，接上面的例子，从3月1号开始A和B都有数据了，那么就开始执行next模块
         #prenext模块和next模块是循环执行的，这个策略是日线模型，那么就是每天执行一次
+
         self.current_date = self.datas[0].datetime.date(0)
         #获取模拟时间
-        if self.params.backtest_start_date <= self.current_date < self.params.backtest_end_date:
+
+        if self.params.backtest_start_date <= self.current_date <= self.params.backtest_end_date:
             #同上
             self.shared_cash_pointing()#执行策略
             #同上
@@ -100,8 +111,10 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
                 #else:
                     #continue
             Log.log(self,f'今天的可用资金:{self.cash}')
+            #Log.log(self,f'今天的可用资金:{self.broker.get_cash()}')
             print(self.profit)
             Log.log(self,f'今天的权益:{self.getvalue()}')
+            #Log.log(self,f'今天的权益:{self.broker.get_value()}')
 
     def stop(self):
         #stop模块，在最后一天结束后执行，整个回测过程只执行一次
@@ -109,16 +122,16 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
         #考虑我们计算每个品种利润的方式，初始的时候，利润是0，如果有开仓，就减掉开仓成本，如果有
         #平仓，就加上平仓收益，由于到了最后一天可能上一笔开仓未平，我们要把这最后一笔开仓成本
         #通过当天(最后一天)的收盘价释放出来，实际上就是一个模拟平仓的过程
-        '''for data in self.datas:#遍历所有品种
+        for data in self.datas:#遍历所有品种
             if self.getposition(data).size!=0:#如果有持仓
                 self.profit[data._name]+=abs(self.getposition(data).size)*abs(data.close[0])
-                #调整利润'''
+                #调整利润
         self.calculate_contribution()
         #计算各个品种对于总利润的贡献
         
         Log.log(self,f"期初权益:{self.init_cash},{self.params.EMA26},{self.params.EMA12},{self.params.EMA9},{self.params.backtest_start_date},{self.params.backtest_end_date}",dt=self.params.backtest_end_date)
 
-        Log.log(self,f"期末权益:{self.getvalue()},{self.params.EMA26},{self.params.EMA12},{self.params.EMA9},{self.params.backtest_start_date},{self.params.backtest_end_date}",dt=self.params.backtest_end_date)
+        Log.log(self,f"期末权益:{self.broker.get_value()},{self.params.EMA26},{self.params.EMA12},{self.params.EMA9},{self.params.backtest_start_date},{self.params.backtest_end_date}",dt=self.params.backtest_end_date)
 
         print(self.profit)
         print(self.profit_contribution)
@@ -128,15 +141,18 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
     def notify_order(self,order):
         #在一笔订单完成后输出有关于这笔订单的信息，这部分也可参照BackTrader源文档，因为写法基本固定
         if self.notify_flag:#控制订单打印的BOOL变量为真
+            flag=0
             data=order.data#获取这笔订单对应的品类
             current_time=self.datetime.date(0)#时间
             dataname=order.data._name#合约名称
             unit_price=order.executed.price#单价
             trade_nums=order.executed.size#手数
-            trade_value=order.executed.value#总价
+            #trade_value=order.executed.value#总价
+            trade_value=order.margin
             trade_comm=order.executed.comm
-
-
+            trade_type=None
+            available_cash=self.broker.get_cash()
+            total_value=self.broker.get_value()
             if order is None:
                 Log.log(self,f'Receive a none order')
                 return
@@ -151,7 +167,7 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
                     f"每手价格:{order.executed.price:.2f},"
                     f"总价格:{(order.executed.value):.2f},"
                     f"手续费:{order.executed.comm:.2f},"
-                    f"该品种现有持仓:{self.getposition(data)}"
+                    f"该品种现有持仓:{self.getposition(data).size}"
                     )
                     self.order_list[data].append(self.getposition(data).size)
                     #order_list[data]记载了data这个品类每笔交易上持仓数量的变化
@@ -159,31 +175,74 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
                     #注意在BackTrader系统当中，空头的持仓为负数
                     if self.order_list[data][-1]>0 and self.order_list[data][-2]>=0 and self.order_list[data][-1]>self.order_list[data][-2]:
                     #如果现在和这笔订单完成之前，持仓都为正，且现在比之前更大，那么就是开多仓/加多仓
-                        self.cashflow(data,-1,order)#调整可用现金
-                        available_cash=self.cash#调整后获取现金
-                        total_value=self.getvalue()
+                        #self.cashflow(data,-1,order)#调整可用现金
+                        #available_cash=self.cash#调整后获取现金
+                        #total_value=self.broker.get_value()
                         if self.order_list[data][-2]==0:#开多仓
                             trade_type="开多仓"
+                            self.log[data]=self.log[data]+abs(order.executed.price)*abs(order.executed.size)
+                            #统计开仓总成本
                             self.paper_profit[data]=0
                             self.paper_profit[data]-=(abs(order.executed.value)+abs(order.executed.comm))
+                            self.cash-=(abs(order.executed.value)+abs(order.executed.comm))
+                            #可用资金(现金)的变化:要减掉交出的保证金和手续费
                             #记录浮盈
+                            self.average_open_cost[data]=abs(self.log[data]/(self.getposition(data).size))
+                            #在该订单执行完毕后，更新此笔交易的平均开仓成本(以收盘价计)
+                            #注意这里不要以保证金计，要用收盘价计
                         else:
                             trade_type="加多仓"
+                            self.log[data]=self.log[data]+abs(order.executed.price)*abs(order.executed.size)
+                            #增加成本
                             self.paper_profit[data]-=(abs(order.executed.value)+abs(order.executed.comm))
                             #记录浮盈
+                            self.average_open_cost[data]=abs(self.log[data]/(self.getposition(data).size))
+                            self.cash-=(abs(order.executed.value)+abs(order.executed.comm))
+                            #可用资金(现金)的变化:要减掉交出的保证金和手续费
+                            #在该订单执行完毕后，更新此笔交易的平均开仓成本(以收盘价计)
 
                     if self.order_list[data][-1]<=0 and self.order_list[data][-2]<0 and self.order_list[data][-1]>self.order_list[data][-2]:
                     #如果现在和这笔订单完成之前，持仓都为负，且现在比之前更大，那么就是平空仓/减空仓
-                        self.cashflow(data,1,order)#调整可用现金
-                        available_cash=self.cash#调整后获取现金
-                        total_value=self.getvalue()
+                        #self.cashflow(data,1,order)#调整可用现金
+                        #available_cash=self.cash#调整后获取现金
+                        #total_value=self.broker.get_value()
                         if self.order_list[data][-1]==0:#平空仓
                             trade_type="平空仓"
                             self.paper_profit[data]=self.paper_profit[data]+abs(order.executed.value)-order.executed.comm
                             #记录浮盈
+                            self.cash=self.cash+abs(order.executed.value)
+                            #可用现金要加上退回来的保证金
+                            self.cash=self.cash-abs(order.executed.comm)
+                            #减掉手续费
+                            if data.close[0]<self.average_open_cost[data]:
+                            #如果现在的收盘价小于平均开仓成本，说明空头盈利
+                                self.cash+=abs(order.executed.size)*abs(data.close[0]-self.average_open_cost[data])
+                                #盈利额=手数*|(收盘价-平均开仓成本)|
+                            else:
+                            #如果现在的收盘价大于等于平均开仓成本，说明空头亏损(至少是不盈利)
+                                self.cash-=abs(order.executed.size)*abs(data.close[0]-self.average_open_cost[data])
+                                #亏损额=手数*|(收盘价-平均开仓成本)|
+                            flag=1#平仓之后要把总成本和平均持仓成本全部变成0
+
                         else:
                             trade_type="减空仓"
                             self.paper_profit[data]=self.paper_profit[data]+abs(order.executed.value)-order.executed.comm
+                            self.cash=self.cash+abs(order.executed.value)
+                            #可用现金要加上退回来的保证金
+                            self.cash=self.cash-abs(order.executed.comm)
+                            #减去手续费
+                            self.log[data]=self.log[data]-abs(order.executed.size)*self.average_open_cost[data]
+                            #减仓时候要把减的那些手的开仓成本从总成本当中去掉
+                            if data.close[0]<self.average_open_cost[data]:
+                                #如果现在的收盘价小于平均开仓成本，说明空头盈利
+                                self.cash+=abs(order.executed.size)*abs(data.close[0]-self.average_open_cost[data])
+                                #盈利额=手数*|(收盘价-平均开仓成本)|
+                            else:
+                            #如果现在的收盘价大于等于平均开仓成本，说明空头亏损(至少是不盈利)
+                                self.cash-=abs(order.executed.size)*abs(data.close[0]-self.average_open_cost[data])
+                                #亏损额=手数*|(收盘价-平均开仓成本)|
+
+
                     #观察日志，发现手数和金额同号的时候是开/加仓，反之是平/减仓
                     #if (order.executed.size*order.executed.value)>0:
                         #self.cashflow(data,-1,order)
@@ -199,32 +258,66 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
                     f"每手价格:{order.executed.price:.2f},"
                     f"总价格:{(order.executed.value):.2f},"
                     f"手续费:{order.executed.comm:.2f},"
-                    f"该品种现有持仓:{self.getposition(data)}"
+                    f"该品种现有持仓:{self.getposition(data).size}"
                     )
                     self.order_list[data].append(self.getposition(data).size)
                     if self.order_list[data][-1]>=0 and self.order_list[data][-2]>0 and self.order_list[data][-1]<self.order_list[data][-2]:
-                        self.cashflow(data,1,order)#平多仓/减多仓
-                        available_cash=self.cash#调整后获取现金
-                        total_value=self.getvalue()
+                        #self.cashflow(data,1,order)#平多仓/减多仓
+                        #available_cash=self.cash#调整后获取现金
+                        #total_value=self.broker.get_value()
                         if self.order_list[data][-1]==0:#平多仓
                             trade_type="平多仓"
                             self.paper_profit[data]=self.paper_profit[data]+abs(order.executed.value)-order.executed.comm
                             #记录浮盈
+                            self.cash+=abs(order.executed.value)#现金要加上退回来的保证金
+                            self.cash=self.cash-abs(order.executed.comm)
+                            #减去手续费
+                            if self.average_open_cost[data]<data.close[0]:#如果平均开仓成本<收盘价，说明多头盈利
+                                self.cash+=abs(order.executed.size)*abs(data.close[0]-self.average_open_cost[data])
+                                #盈利额=手数*|(收盘价-平均开仓成本)|
+                            else:#如果平均开仓成本>=收盘价，说明多头不盈利
+                                self.cash-=abs(order.executed.size)*abs(data.close[0]-self.average_open_cost[data])
+                                #亏损额=手数*|(收盘价-平均开仓成本)|
+                            flag=1#平仓之后要把总成本和平均持仓成本全部变成0
+
                         else:
                             trade_type="减多仓"
+                            self.log[data]=self.log[data]-abs(order.executed.size)*self.average_open_cost[data]
+                            #注意：减多仓要把减的那些手的开仓成本去掉，不然影响后面的计算
                             self.paper_profit[data]=self.paper_profit[data]+abs(order.executed.value)-order.executed.comm
                             #记录浮盈
+                            self.cash+=abs(order.executed.value)#现金要加上退回来的保证金
+                            self.cash=self.cash-abs(order.executed.comm)
+                            #减去手续费
+                            if self.average_open_cost[data]<data.close[0]:#如果平均开仓成本<收盘价，说明多头盈利
+                                self.cash+=abs(order.executed.size)*abs(data.close[0]-self.average_open_cost[data])
+                                #盈利额=手数*|(收盘价-平均开仓成本)|
+                            else:#如果平均开仓成本>=收盘价，说明多头不盈利
+                                self.cash-=abs(order.executed.size)*abs(data.close[0]-self.average_open_cost[data])
+                                #亏损额=手数*|(收盘价-平均开仓成本)|
+
+
                     if self.order_list[data][-1]<0 and self.order_list[data][-2]<=0 and self.order_list[data][-1]<self.order_list[data][-2]:
-                        self.cashflow(data,-1,order)#开空仓/加空仓
-                        available_cash=self.cash#调整后获取现金
-                        total_value=self.getvalue()
+                        #self.cashflow(data,-1,order)#开空仓/加空仓
+                        #available_cash=self.cash#调整后获取现金
+                        #total_value=self.broker.get_value()
                         if self.order_list[data][-2]==0:
                             trade_type="开空仓"
-                            self.paper_profit[data]
+                            self.log[data]=self.log[data]+abs(order.executed.price)*abs(order.executed.size)
+                            self.average_open_cost[data]=abs(self.log[data]/(self.getposition(data).size))
                             self.paper_profit[data]-=(abs(order.executed.value)+abs(order.executed.comm))
+                            self.cash-=(abs(order.executed.value)+abs(order.executed.comm))
+                            #可用资金(现金)的变化:要减掉交出的保证金和手续费
+                            #记录浮盈
+                            #在该订单执行完毕后，更新此笔交易的平均开仓成本(以收盘价计)
+                            #注意这里不要以保证金计，要用收盘价计
                         else:
                             trade_type="加空仓"
+                            self.log[data]=self.log[data]+abs(order.executed.price)*abs(order.executed.size)
+                            #
+                            self.average_open_cost[data]=abs(self.log[data]/(self.getposition(data).size))
                             self.paper_profit[data]-=(abs(order.executed.value)+abs(order.executed.comm))
+                            self.cash-=(abs(order.executed.value)+abs(order.executed.comm))
 
 
                     #观察日志，发现手数和金额同号的时候是开/加仓，反之是平/减仓
@@ -234,20 +327,27 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
                     #elif (order.executed.size*order.executed.value)<0:
                         #self.cashflow(data,1,order)
 
-                self.info.loc[self.num_of_trade]=[current_time,dataname,trade_type,unit_price,trade_nums,trade_value,trade_comm,available_cash,total_value,self.paper_profit[data]]
+                self.info.loc[self.num_of_trade]=[current_time,dataname,trade_type,unit_price,trade_nums,trade_value,trade_comm,self.cash,self.average_open_cost[data]]
                 self.num_of_trade+=1#交易次数+1
+                if flag==1:
+                    self.log[data]=0
+                    self.average_open_cost[data]=0
 
     def cashflow(self,data,symbol,order):
         #通过订单和品类，改变字典中这个品类的利润
         if symbol==1:#symbol用来判断是开/平，从而确定利润改变的方向：增/减
-            self.profit[data._name]+=abs(order.executed.value)
+            self.profit[data._name]=self.profit[data._name]+abs(order.executed.value)
+            self.profit[data._name]=self.profit[data._name]-abs(order.executed.comm)
             #通过executed.value来加减利润
             Log.log(self,f'品类:{data._name}的利润增加额:{abs(order.executed.value)}')
             self.cash=self.cash+abs(order.executed.value)
+            self.cash=self.cash-abs(order.executed.comm)
         elif symbol==-1:
-            self.profit[data._name]-=abs(order.executed.value)
+            self.profit[data._name]=self.profit[data._name]-abs(order.executed.value)
+            self.profit[data._name]=self.profit[data._name]-abs(order.executed.comm)
             Log.log(self,f'品类:{data._name}的利润减少额:{abs(order.executed.value)}')
             self.cash=self.cash-abs(order.executed.value)
+            self.cash=self.cash-abs(order.executed.comm)
 
 
     def shared_cash_pointing(self):#具体的策略（打分方式是随便写的）
@@ -407,7 +507,7 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
     
     def calculate_quantity(self, st:bt.Strategy,line:bt.DataSeries) -> int:
         #计算手数，手数=可用资金*0.05/当日收盘价
-        available_cash=self.cash*0.05
+        available_cash=self.broker.get_cash()*0.05
         close_price=line.close[0]
         quantity=int(available_cash/close_price)
         return quantity
@@ -446,7 +546,7 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
     def rebalance_short_positions(self, specific_assets):#给空头调仓
         #同上
         Log.log(self,f"检查现有空头持仓")  # 记录开始检查空头仓位的日志
-        current_value=self.getvalue()  # 获取当前投资组合的总价值
+        current_value=self.broker.get_value()  # 获取当前投资组合的总价值
         Log.log(self,f"总权益:{current_value:.2f}")  # 记录当前投资组合的总价值
         # 获取当前持有的所有空头仓位
         data=specific_assets
@@ -522,3 +622,25 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
                 elif self.profit[data._name]<=0 and total_profit<0:
                     self.profit_contribution[data._name]=(-1)*abs(self.profit[data._name]/total_profit)
 
+
+    def cal_next_bar_is_last_trading_day(self,data):
+        try:
+            next_next_close = data.close[2]
+        except IndexError:
+            return True
+        except:
+            print("something else error")
+        return False
+    
+    def last_trading_day(self,data):
+        try:
+            next_close=data.close[1]
+        except IndexError:
+            return True
+        except:
+            print("something else error")
+        return False
+
+    def close_all_position(self):#全平
+        for data in self.datas:
+            self.close(data=data)
