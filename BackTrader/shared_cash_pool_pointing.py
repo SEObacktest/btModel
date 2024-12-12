@@ -43,6 +43,9 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
         self.average_open_cost=dict()
         self.margin=dict()
         self.total_value=0
+        self.is_trade=dict()
+        #标记每天每个品种是否有交易
+        self.test=1
 
         for data in self.datas:#每个品类都需要初始化一次
             c=data.close
@@ -59,6 +62,7 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
             self.log[data]=0
             self.average_open_cost[data]=0
             self.margin[data]=0#这个来记录现在已经缴纳的保证金
+            self.is_trade[data]=False#初始化是没有交易
     def prenext(self):
         #prenext模块，这个模块用来执行当“只有部分品种有数据”的时候的回测。
         #举个例子，A品种从1月1号开始有数据，B品种从3月1号开始有数据。
@@ -88,9 +92,11 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
     def next(self):
         #next模块，接上面的例子，从3月1号开始A和B都有数据了，那么就开始执行next模块
         #prenext模块和next模块是循环执行的，这个策略是日线模型，那么就是每天执行一次
-
+        total_value=0
+        total_margin=0
         self.current_date = self.datas[0].datetime.date(0)
         #获取模拟时间
+
 
         if self.params.backtest_start_date <= self.current_date <= self.params.backtest_end_date:
             #同上
@@ -112,11 +118,63 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
                     #同上
                 #else:
                     #continue
+
+        #注意到就算当天没有交易的品种仍然会有浮动盈亏,也会对权益产生影响。
+        #怎么判断该品种今天有没有交易?在next中引入一个dict来保存
+            for data2 in self.datas:
+                margin_mult=self.get_margin_percent(data2)
+                margin_percent=margin_mult['margin']
+                mult=margin_mult['mult']
+                if self.is_trade[data2]==False:#如果找到了今天没有交易的品种
+                    if self.getposition(data2).size>0:#如果持多仓
+                        self.paper_profit[data2]=(data2.close[0]-self.average_open_cost[data2])*abs(self.getposition(data2).size)
+                        #就算不交易，还是有浮盈的变化
+                        margin=abs(self.getposition(data2).size)*abs(data2.close[0])*mult*margin_percent
+                        self.margin[data2]=margin
+                        #就算不交易，也需要重新计算保证金
+
+                        for data1 in self.datas:
+                            total_margin+=self.margin[data1]
+                            total_value=total_value+self.margin[data1]
+                            total_value=total_value+self.paper_profit[data1]
+                
+                        total_value+=self.cash
+                        self.info.loc[self.num_of_trade]=[self.current_date,data2._name,"不交易",0,0,0,0,round(self.cash),round(self.average_open_cost[data2]),round(self.paper_profit[data2]),round(total_value),data2.close[0],round(total_margin)]
+                        self.num_of_trade+=1#临时充当dataframe的行数
+                        #注意到这其实影响了真正的交易次数
+                    elif self.getposition(data2).size<0:#如果持空仓
+                        self.paper_profit[data2]=-(data2.close[0]-self.average_open_cost[data2])*abs(self.getposition(data2).size)
+                        margin=abs(self.getposition(data2).size)*abs(data2.close[0])*mult*margin_percent
+                        self.margin[data2]=margin
+                        total_margin=0
+
+                        for data1 in self.datas:
+                            total_margin+=self.margin[data1]
+                            total_value=total_value+self.margin[data1]
+                            total_value=total_value+self.paper_profit[data1]
+                
+                        total_value+=self.cash
+                        self.info.loc[self.num_of_trade]=[self.current_date,data2._name,"不交易",0,0,0,0,round(self.cash),round(self.average_open_cost[data2]),round(self.paper_profit[data2]),round(total_value),data2.close[0],round(total_margin)]
+                        self.num_of_trade+=1#临时充当dataframe的行数
+                        #注意到这其实影响了真正的交易次数
+                    #就算不交易，也需要重新计算保证金
+
+            total_margin=0
+
+            for data1 in self.datas:
+                total_margin+=self.margin[data1]
+                total_value=total_value+self.margin[data1]
+                total_value=total_value+self.paper_profit[data1]
+                
+            total_value+=self.cash
+
             Log.log(self,f'今天的可用资金:{self.cash}')
             #Log.log(self,f'今天的可用资金:{self.broker.get_cash()}')
             print(self.profit)
             Log.log(self,f'今天的权益:{self.getvalue()}')
             #Log.log(self,f'今天的权益:{self.broker.get_value()}')
+            for data in self.datas:
+                self.is_trade[data]=False#每天都要初始化一次，设置成每个品种都没有交易
 
     def stop(self):
         #stop模块，在最后一天结束后执行，整个回测过程只执行一次
@@ -145,6 +203,7 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
         if self.notify_flag:#控制订单打印的BOOL变量为真
             flag=0
             data=order.data#获取这笔订单对应的品类
+            self.is_trade[data]=True#记录该品类今天有交易
             current_time=self.datetime.date(0)#时间
             dataname=order.data._name#合约名称
             unit_price=order.executed.price#单价
@@ -377,6 +436,63 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
                             self.paper_profit[data]=-(data.close[0]-self.average_open_cost[data])*abs(self.getposition(data).size)
                             #浮盈=-(收盘价-开仓均价)*持仓手数
                             trade_value=margin
+            
+            if trade_type==None:#反手开仓是特殊条件,BackTrader无法判断这种条件
+                if self.order_list[data][-2]<0 and self.getposition(data).size>0:
+                    #此时是处在平空反手开多过程当中
+                        trade_type="反手平空"
+                        #记录浮盈
+                        margin=abs(order.executed.price)*abs(order.executed.size)*mult*margin_percent
+                        #平仓释放的保证金
+                        margin=abs(margin)
+                        self.margin[data]=0
+                        #平仓了，该品类保证金归零
+                        self.cash=self.cash+abs(margin)
+                        #可用现金要加上退回来的保证金
+                        self.cash=self.cash-trade_comm
+                        #减掉手续费
+                        if unit_price<self.average_open_cost[data]:
+                        #如果现在的收盘价小于平均开仓成本，说明空头盈利
+                            self.cash+=abs(order.executed.size)*abs(unit_price-self.average_open_cost[data])
+                            #盈利额=手数*|(收盘价-平均开仓成本)|
+                        else:
+                        #如果现在的收盘价大于等于平均开仓成本，说明空头亏损(至少是不盈利)
+                            self.cash-=abs(order.executed.size)*abs(unit_price-self.average_open_cost[data])
+                            #亏损额=手数*|(收盘价-平均开仓成本)|
+                        trade_value=margin#该笔交易总额:退回来的保证金
+                        flag=1#平仓之后要把总成本和平均持仓成本全部变成0
+                        self.paper_profit[data]=0
+                        #已平仓，浮盈归零
+                        self.order_list[data].append(0)
+
+                if self.order_list[data][-2]>0 and self.getposition(data).size<0:
+                    #此时是处在平多反手开空过程当中
+                        trade_type="反手平多"
+                        #记录浮盈
+                        margin=abs(order.executed.price)*abs(order.executed.size)*mult*margin_percent
+                        #平仓释放的保证金
+                        margin=abs(margin)
+                        self.margin[data]=0
+                        #平仓了，该品类保证金归零
+                        self.cash=self.cash+abs(margin)
+                        #可用现金要加上退回来的保证金
+                        self.cash=self.cash-trade_comm
+                        #减掉手续费
+                        if unit_price>self.average_open_cost[data]:
+                        #如果平仓价大于平均开仓成本，说明多头盈利
+                            self.cash+=abs(order.executed.size)*abs(unit_price-self.average_open_cost[data])
+                            #盈利额=手数*|(收盘价-平均开仓成本)|
+                        else:
+                        #如果现在的收盘价大于等于平均开仓成本，说明空头亏损(至少是不盈利)
+                            self.cash-=abs(order.executed.size)*abs(unit_price-self.average_open_cost[data])
+                            #亏损额=手数*|(收盘价-平均开仓成本)|
+                        trade_value=margin#该笔交易总额:退回来的保证金
+                        flag=1#平仓之后要把总成本和平均持仓成本全部变成0
+                        self.paper_profit[data]=0
+                        #已平仓，浮盈归零
+                        self.order_list[data].append(0)
+
+
 
         for data1 in self.datas:
             total_margin+=self.margin[data1]
@@ -394,7 +510,7 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
                     #elif (order.executed.size*order.executed.value)<0:
                         #self.cashflow(data,1,order)
 
-        self.info.loc[self.num_of_trade]=[current_time,dataname,trade_type,unit_price,trade_nums,trade_value,round(trade_comm),round(self.cash),round(self.average_open_cost[data]),round(self.paper_profit[data]),round(total_value),data.close[0],total_margin]
+        self.info.loc[self.num_of_trade]=[current_time,dataname,trade_type,unit_price,trade_nums,round(trade_value),round(trade_comm),round(self.cash),round(self.average_open_cost[data]),round(self.paper_profit[data]),round(total_value),data.close[0],round(total_margin)]
         self.num_of_trade+=1#交易次数+1
         if flag==1:
             self.log[data]=0
@@ -505,6 +621,12 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
                     best_data=data
                     break
             
+            #测试一个永远不交易的
+            if self.test!=1 and data._name=='LCL.GFE':
+                return
+            elif self.test==1 and data._name=='LCL.GFE':
+                self.test+=1
+            
             if best_data:
                 size=self.calculate_quantity(self,best_data)
                 #计算开多手数
@@ -539,6 +661,13 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
                 if data._name==stock:
                     worst_data=data
                     break
+
+            #测试一个永远不交易的
+            if self.test!=1 and data._name=='LCL.GFE':
+                return
+            elif self.test==1 and data._name=='LCL.GFE':
+                self.test+=1
+
             if worst_data:
                 size=self.calculate_quantity(self,worst_data)
                 #计算开空手数
@@ -566,6 +695,13 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
                 if data._name==stock:
                     close_data=data
                     break
+
+            #测试一个永远不交易的
+            if self.test!=1 and data._name=='LCL.GFE':
+                return
+            elif self.test==1 and data._name=='LCL.GFE':
+                self.test+=1
+
             if close_data:
                 pos=self.getposition(close_data).size
                 if pos!=0:#有仓位，就平仓
