@@ -5,6 +5,7 @@ from backtrader.analyzers import *
 import numpy as np
 import tools.log_func as log
 import config
+from tools.db_mysql import get_engine
 
 class DataIO():
     """
@@ -185,12 +186,13 @@ class DataIO():
 
         """
         交互式地获取用户想要回测的股票名称、回测起始日期和结束日期。
-        :return: 用户选择的股票代码列表、回测起始日期和结束日期
+        :return: 用户选择的股票代码wh_code列表、回测起始日期和结束日期
         """
         # 显示股票代码列表并获取股票信息字典
-        name_dict = DataIO.show_future_codes()
-
-        codes = list()  # 存储用户选择的股票代码
+        # name_dict = DataIO.show_future_codes()
+        # name_dict, alias_to_name= DataIO.show_future_codes_from_mysql()
+        name_dict = DataIO.show_future_codes_from_mysql()
+        wh_codes = list()  # 存储用户选择的股票文华代码
         names = list()  # 存储用户输入的股票名称
         print("请对应期货代码表输入，需要回测的期货名称,结束请输入“#” ")
         print("===============================================")
@@ -199,13 +201,17 @@ class DataIO():
             name = input("请继续输入：\n").strip()
             if name == "#":
                 break  # 输入'#'表示结束输入
+            if name in name_dict:
+                names.append(name)  # 添加到名称列表中
             if name not in name_dict:
+                # if name in alias_to_name:
+                #     real_name = alias_to_name[name]
+                #     names.append(real_name)
                 print("输入期货不存在，请重新输入")
                 continue  # 如果股票名称不存在，提示重新输入
-            names.append(name)  # 添加到名称列表中
-        # 根据名称列表获取对应的股票代码
+        # 根据名称列表获取对应的股票文化码
         for name in names:
-            codes.append(name_dict[name][0])
+            wh_codes.append(name_dict[name][-1])
         # 获取回测的起始日期和结束日期
         while True:
             if not names:
@@ -248,7 +254,7 @@ class DataIO():
         DataIO.end_date=end_date
         config.start_date=start_date
         config.end_date=end_date
-        return codes, start_date, end_date  # 返回股票代码列表和日期
+        return wh_codes,names, start_date, end_date  # 返回股票代码列表和日期
  
     @staticmethod
     def add_analysers(cerebro):
@@ -471,31 +477,66 @@ class DataIO():
                     log.Log.Log.log(self,"Target percentage must be between 0 and 1.")
             except ValueError:
                 log.Log.Log.log("Invalid input. Please enter a valid number.")
-    @staticmethod
-    def show_future_codes():
+
+    def show_future_codes_from_mysql():
         """
-        显示所有上市交易的股票代码，并返回股票名称与代码、上市日期的对应字典。
-        :return: 股票名称与其代码和上市日期的字典
+        从MySQL数据库中读取所有上市交易的期货代码，并返回期货名称与代码、上市日期的对应字典。
+        :return: 期货名称与其代码和上市日期的字典
         """
+        connection = get_engine()
+        # 使用pandas读取MySQL数据库中的表 future_codes
+        query = "SELECT * FROM future_codes"
+        data = pd.read_sql(query,con=connection)
+        print(data.columns)
+
         # 设置Pandas显示选项，显示所有列和所有行
         pd.set_option('display.max_columns', None)
         pd.set_option('display.max_rows', None)
-        # 读取之前保存的股票代码CSV文件
-        data = pd.read_csv("datasets/future_codes.csv", index_col=0)
-        # 重命名列名为中文
-        # 打印股票代码列表
-        print("===================期货品种代码列表===================")
-        print(data)
-        print("===============================================")
-        # 创建一个字典，用于存储股票名称与其代码和上市日期的对应关系
-        name_dict = dict()
 
-        # 遍历每一行数据，填充name_dict
+        # 打印期货品种代码列表
+        print("===================期货品种代码列表===================")
+        print(data.iloc[:, :4])  # 只展示前四列
+        print("===============================================")
+
+        # 创建一个字典，用于存储期货名称与其代码和上市日期的对应关系
+        name_dict = dict()
+        alias_to_name = {} # 用于期货名到别名的映射
+
+        # 遍历每一行数据，填充name_dict # 和 alias_to_name
         for index, row in data.iterrows():
-            information_list = list()
-            information_list.append(row['code'])  # 添加股票代码
-            information_list.append(row['期货名'])
-            name_dict[row['期货名']] = information_list  # 键为股票名称，值为信息列表
-        return name_dict  # 返回股票信息字典
+            information_list = [row['code'], row['期货名'],row['别名'],row['wh_code']]  # 假设表中有'code'和'期货名'这两列
+            name_dict[row['期货名']] = information_list  # 键为期货名称，值为信息列表
+            # if pd.notna(row['别名']):
+            #     # 如果有别名，则将其映射到期货名
+            #     alias_to_name[row['别名']] = row['期货名']
+
+        return name_dict  # ,alias_to_name  # 返回期货信息字典及别名映射
+
+    # @staticmethod
+    # def show_future_codes():
+    #     """
+    #     显示所有上市交易的股票代码，并返回股票名称与代码、上市日期的对应字典。
+    #     :return: 股票名称与其代码和上市日期的字典
+    #     """
+    #     # 设置Pandas显示选项，显示所有列和所有行
+    #     pd.set_option('display.max_columns', None)
+    #     pd.set_option('display.max_rows', None)
+    #     # 读取之前保存的股票代码CSV文件
+    #     data = pd.read_csv("datasets/future_codes.csv", index_col=0)
+    #     # 重命名列名为中文
+    #     # 打印股票代码列表
+    #     print("===================期货品种代码列表===================")
+    #     print(data)
+    #     print("===============================================")
+    #     # 创建一个字典，用于存储股票名称与其代码和上市日期的对应关系
+    #     name_dict = dict()
+    #
+    #     # 遍历每一行数据，填充name_dict
+    #     for index, row in data.iterrows():
+    #         information_list = list()
+    #         information_list.append(row['code'])  # 添加股票代码
+    #         information_list.append(row['期货名'])
+    #         name_dict[row['期货名']] = information_list  # 键为股票名称，值为信息列表
+    #     return name_dict  # 返回股票信息字典
 
 
