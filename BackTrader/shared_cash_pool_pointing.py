@@ -854,8 +854,8 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
         connection = get_engine()
         query = "SELECT * FROM future_codes"
         info = pd.read_sql(query, con=connection)
-        margin=info[info['期货名']==data._name]['保证金比例'].iloc[0]#读取保证金比例
-        mult=info[info['期货名']==data._name]['合约乘数'].iloc[0]#读取合约乘数
+        margin=info[info['wh_code']==data._name]['保证金比例'].iloc[0]#读取保证金比例
+        mult=info[info['wh_code']==data._name]['合约乘数'].iloc[0]#读取合约乘数
         ans=dict()
         ans['margin']=margin
         ans['mult']=mult

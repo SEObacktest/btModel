@@ -77,10 +77,10 @@ class BackTest:
         print(f"回测区间：{DataGet.get_date_from_int(start_date)}至{DataGet.get_date_from_int(end_date)}")
         # DataIO.text_report(cerebro=cerebro, strat=strat)  # 输出回测报告
         print("========共享资金池打分回测========")'''
-    def shared_cash_fut_pointing_test(symbol_list, start_date, end_date):
+    def shared_cash_fut_pointing_test(code_list,name_list, start_date, end_date):
         """
         使用共享资金池进行打分回测
-        :param symbol_list: 品种代码列表
+        :param name_list: 品种名称列表
         :param start_date: 回测开始日期
         :param end_date: 回测结束日期
         """
@@ -94,11 +94,10 @@ class BackTest:
         cerebro.broker.set_coc(True)#启用未来数据
         #cerebro.broker.set_slippage_fixed(1)#固定滑点为1
         BackTestSetup.set_cerebro(cerebro=cerebro, opt_judge=False)  # 设置回测引擎
-        DataGet.get_fut_data(cerebro=cerebro, 
-                             names=symbol_list,
-                             start_date=start_date, 
-                             end_date=end_date)  # 获取数据
-        for name in symbol_list:
+        DataGet.get_fut_data(cerebro=cerebro,
+                             codes=code_list,
+                             )  # 获取数据
+        for name in name_list:
             margin=info[info['期货名']==name]['保证金比例'].iloc[0]#从DataFrame里面取得保证金
             mult=info[info['期货名']==name]['合约乘数'].iloc[0]#从DataFrame里面取得合约乘数
             comm=ComminfoFuturesPercent(commission=0.0001,margin=margin,mult=mult)
@@ -134,7 +133,7 @@ class BackTest:
         cerebro.run(maxcpus=8)#运行回测，只用一个CPU核，避免线程错乱
 
         print("========共享资金池打分回测========")
-        print(f"品种：{symbol_list}")
+        print(f"品种：{name_list}")
         print(f"回测区间：{DataGet.get_date_from_int(start_date)}至{DataGet.get_date_from_int(end_date)}")
         #DataIO.text_report(cerebro=cerebro, strat=strat)  # 输出回测报告
         print("========共享资金池打分回测========")

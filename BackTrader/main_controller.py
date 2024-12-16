@@ -12,8 +12,8 @@ class MainController:
             if pick=='1':
                 pass
             if pick=='2':
-                codes, names,start_date, end_date = DataIO.input_futureInformation()
-                BackTest.shared_cash_fut_pointing_test(symbol_list=names,start_date=start_date,end_date=end_date)
+                wh_codes, names,start_date, end_date = DataIO.input_futureInformation()
+                BackTest.shared_cash_fut_pointing_test(code_list=wh_codes,name_list=names,start_date=start_date,end_date=end_date)
                 return
             print("*************************************************************************************")
             choose = input("请选择功能：\n1.批量独立资金池回测\n2.共享资金池回测\n3.共享资金池打分回测\n4.策略参数优化\n(输入：“*”退出系统)\n")
