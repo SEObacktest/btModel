@@ -209,8 +209,8 @@ class DataIO():
             wh_codes.append(name_dict[name][-1])
 
         # 选回测周期
-        period_options = {"1": ('day', 'day'), "2": ('15min', 'min'),"3": ('5s', 's')}
-        period_input = input("请选择回测周期：\n1.一天\n2.15分钟\n3.5秒钟\n").strip()
+        period_options = {"1": ('day', 'day'), "2": ('15min', 'min'),"3": ('1min', 'min'),"4": ('5s', 's')}
+        period_input = input("请选择回测周期：\n1.一天\n2.15分钟\n3.1分钟\n4.5秒钟\n").strip()
         if period_input not in period_options:
             print("无效选项，请重新运行程序并选择有效选项。")
             exit()
