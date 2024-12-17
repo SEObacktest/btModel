@@ -77,7 +77,7 @@ class BackTest:
         print(f"回测区间：{DataGet.get_date_from_int(start_date)}至{DataGet.get_date_from_int(end_date)}")
         # DataIO.text_report(cerebro=cerebro, strat=strat)  # 输出回测报告
         print("========共享资金池打分回测========")'''
-    def shared_cash_fut_pointing_test(code_list,name_list, start_date, end_date):
+    def shared_cash_fut_pointing_test(code_list,name_list, start_date, end_date,period,has_time):
         """
         使用共享资金池进行打分回测
         :param name_list: 品种名称列表
@@ -96,7 +96,7 @@ class BackTest:
         BackTestSetup.set_cerebro(cerebro=cerebro, opt_judge=False)  # 设置回测引擎
         DataGet.get_fut_data(cerebro=cerebro,
                              codes=code_list,
-                             )  # 获取数据
+                             period=period)  # 获取数据
         for name in name_list:
             margin=info[info['期货名']==name]['保证金比例'].iloc[0]#从DataFrame里面取得保证金
             mult=info[info['期货名']==name]['合约乘数'].iloc[0]#从DataFrame里面取得合约乘数
@@ -113,9 +113,13 @@ class BackTest:
                             EMA26=range(24,27),
                             EMA12=range(12,15),
                             EMA9=range(9,12))'''
+        start_full = DataGet.get_date_from_int(start_date, has_time)
+        end_full = DataGet.get_date_from_int(end_date, has_time)    #  datetime.datetime格式
         cerebro.addstrategy(Shared_Cash_Pool_Pointing,
-                            backtest_start_date=DataGet.get_date_from_int(start_date),
-                            backtest_end_date=DataGet.get_date_from_int(end_date),
+                            # backtest_start_date=DataGet.get_date_from_int(start_date,has_time),
+                            # backtest_end_date=DataGet.get_date_from_int(end_date,has_time),
+                            backtest_start_date=start_full,
+                            backtest_end_date=end_full,
                             EMA26=26,
                             EMA12=12,
                             EMA9=9)
@@ -134,7 +138,8 @@ class BackTest:
 
         print("========共享资金池打分回测========")
         print(f"品种：{name_list}")
-        print(f"回测区间：{DataGet.get_date_from_int(start_date)}至{DataGet.get_date_from_int(end_date)}")
+        # print(f"回测区间：{DataGet.get_date_from_int(start_date,has_time)}至{DataGet.get_date_from_int(end_date,has_time)}")
+        print(f"回测区间：{start_full}至{end_full}")
         #DataIO.text_report(cerebro=cerebro, strat=strat)  # 输出回测报告
         print("========共享资金池打分回测========")
 

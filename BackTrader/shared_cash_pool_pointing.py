@@ -70,7 +70,8 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
         #回测从1月1号开始，我们当然希望从1月1号开始先回测A品种，等3月1号开始
         #再把B品种加进来，这种有数据断层的时间我们就要通过prenext来执行
 
-        current_date = self.datetime.date(0)#获取回测当天的时间(模拟时间)
+        # current_date = self.datetime.date(0)#获取回测当天的时间(模拟时间)
+        current_date = self.datas[0].datetime.datetime(0)
         #如果模拟时间在回测区间内
         if self.params.backtest_start_date <= current_date <= self.params.backtest_end_date:
             self.shared_cash_pointing_prenext()#执行具体的策略
@@ -95,7 +96,8 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
         #prenext模块和next模块是循环执行的，这个策略是日线模型，那么就是每天执行一次
         total_value=0
         total_margin=0
-        self.current_date = self.datas[0].datetime.date(0)
+        # self.current_date = self.datas[0].datetime.date(0)
+        self.current_date = self.datas[0].datetime.datetime(0)
         #获取模拟时间
 
 
@@ -107,15 +109,15 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
                 #if current_date>=self.getdatabyname(data._name).datetime.date(0):
                 #if current_date>=self.start_date[data]:
                 #if len(data)>0:
-                    Log.log(self,f'{data._name}的收盘价:{data.close[0]}')
-                    Log.log(self,f'{data._name}的指标,EMA26:{self.EMA26[data][0]},')
-                    Log.log(self,f'{data._name}的指标,EMA12:{self.EMA12[data][0]},')
-                    Log.log(self,f'{data._name}的指标,DIFF:{self.DIFF[data][0]},')
-                    Log.log(self,f'{data._name}的指标,DEA:{self.DEA[data][0]},')
-                    Log.log(self,f'{data._name}的指标,MACD:{self.MACD[data][0]},')
+                    Log.log(f'{data._name}的收盘价:{data.close[0]}',dt=data.datetime.datetime())
+                    Log.log(f'{data._name}的指标,EMA26:{self.EMA26[data][0]},',dt=data.datetime.datetime())
+                    Log.log(f'{data._name}的指标,EMA12:{self.EMA12[data][0]},',dt=data.datetime.datetime())
+                    Log.log(f'{data._name}的指标,DIFF:{self.DIFF[data][0]},',dt=data.datetime.datetime())
+                    Log.log(f'{data._name}的指标,DEA:{self.DEA[data][0]},',dt=data.datetime.datetime())
+                    Log.log(f'{data._name}的指标,MACD:{self.MACD[data][0]},',dt=data.datetime.datetime())
                     hold_equity=self.getposition(data).size*data.close[0]
                     #持仓权益：仓位(手数)*当天收盘价
-                    Log.log(self,f'{data._name}的权益:{abs(hold_equity)}')
+                    Log.log(f'{data._name}的权益:{abs(hold_equity)}',dt=data.datetime.datetime())
                     #同上
                 #else:
                     #continue
@@ -169,10 +171,10 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
                 
             total_value+=self.cash
 
-            Log.log(self,f'今天的可用资金:{self.cash}')
+            Log.log(f'今天的可用资金:{self.cash}',dt=data.datetime.datetime())
             #Log.log(self,f'今天的可用资金:{self.broker.get_cash()}')
             print(self.profit)
-            Log.log(self,f'今天的权益:{self.getvalue()}')
+            Log.log(f'今天的权益:{self.getvalue()}',dt=data.datetime.datetime())
             #Log.log(self,f'今天的权益:{self.broker.get_value()}')
             for data in self.datas:
                 self.is_trade[data]=False#每天都要初始化一次，设置成每个品种都没有交易
@@ -190,9 +192,11 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
         self.calculate_contribution()
         #计算各个品种对于总利润的贡献
         
-        Log.log(self,f"期初权益:{self.init_cash},{self.params.EMA26},{self.params.EMA12},{self.params.EMA9},{self.params.backtest_start_date},{self.params.backtest_end_date}",dt=self.params.backtest_end_date)
+        Log.log(f"期初权益:{self.init_cash},{self.params.EMA26},{self.params.EMA12},{self.params.EMA9},{self.params.backtest_start_date},{self.params.backtest_end_date}",
+                dt=self.params.backtest_end_date)
 
-        Log.log(self,f"期末权益:{self.broker.get_value()},{self.params.EMA26},{self.params.EMA12},{self.params.EMA9},{self.params.backtest_start_date},{self.params.backtest_end_date}",dt=self.params.backtest_end_date)
+        Log.log(f"期末权益:{self.broker.get_value()},{self.params.EMA26},{self.params.EMA12},{self.params.EMA9},{self.params.backtest_start_date},{self.params.backtest_end_date}",
+                dt=self.params.backtest_end_date)
 
         print(self.profit)
         print(self.profit_contribution)
