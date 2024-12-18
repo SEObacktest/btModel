@@ -114,6 +114,7 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
                         #self.margin[data2]=margin
                         #就算不交易，也需要重新计算保证金
                         total_margin=0
+                        total_value=0
                         for data1 in self.datas:
                             total_margin+=self.margin[data1]
                             total_value=total_value+self.margin[data1]
@@ -127,7 +128,7 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
                         #margin=abs(self.getposition(data2).size)*abs(data2.close[0])*mult*margin_percent
                         #self.margin[data2]=margin
                         total_margin=0
-
+                        total_value=0
                         for data1 in self.datas:
                             total_margin+=self.margin[data1]
                             total_value=total_value+self.margin[data1]
@@ -204,6 +205,7 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
                         #self.margin[data2]=margin
                         #就算不交易，也需要重新计算保证金
                         total_margin=0
+                        total_value=0
                         for data1 in self.datas:
                             total_margin+=self.margin[data1]
                             total_value=total_value+self.margin[data1]
@@ -217,7 +219,7 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
                         #margin=abs(self.getposition(data2).size)*abs(data2.close[0])*mult*margin_percent
                         #self.margin[data2]=margin
                         total_margin=0
-
+                        total_value=0
                         for data1 in self.datas:
                             total_margin+=self.margin[data1]
                             total_value=total_value+self.margin[data1]

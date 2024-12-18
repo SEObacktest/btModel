@@ -130,7 +130,7 @@ class BackTest:
         #with Pool(3) as p:
             #results = p.map(run,params_list)
         
-        cerebro.run(maxcpus=8)#运行回测，只用一个CPU核，避免线程错乱
+        cerebro.run()#运行回测，只用一个CPU核，避免线程错乱
 
         print("========共享资金池打分回测========")
         print(f"品种：{name_list}")
