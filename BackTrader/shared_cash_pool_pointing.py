@@ -98,9 +98,9 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
         total_margin=0
         # self.current_date = self.datas[0].datetime.date(0)
         self.current_date = self.datas[0].datetime.datetime(0)
+        # print(type(self.current_date))
+        # print(type(self.params.backtest_start_date))
         #获取模拟时间
-
-
         if self.params.backtest_start_date <= self.current_date <= self.params.backtest_end_date:
             #同上
             self.shared_cash_pointing()#执行策略

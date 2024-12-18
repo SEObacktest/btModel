@@ -33,7 +33,7 @@ class DataGet:
             raise ValueError(f"Invalid date format or value provided: {e}")
 
     @staticmethod
-    def get_date_from_int(date_str,has_time):
+    def get_date_from_int(date_str):
         """
         将日期的字符串格式（yyyyMMdd）转换为日期对象
         :param date_str: 日期的字符串表示
@@ -41,18 +41,18 @@ class DataGet:
         """
         # 获取日期
         date_str = DataGet.get_str_to_datetime(date_str)
-        if has_time=='min':
-            # 假设输入格式为 yyyyMMddHHmm
-            date_min = date_str
-            return date_min
-        elif has_time=='s':
-            # 假设输入格式为 yyyyMMddHHmmss
-            date_s = date_str
-            return date_s
-        elif has_time=='day':
-            # 假设输入格式为 yyyyMMdd
-            date_full = date_str.date()
-            return date_full
+        # if has_time=='min':
+        #     # 假设输入格式为 yyyyMMddHHmm
+        #     date_min = date_str
+        #     return date_min
+        # elif has_time=='s':
+        #     # 假设输入格式为 yyyyMMddHHmmss
+        #     date_s = date_str
+        #     return date_s
+        # elif has_time=='day':
+        #     # 假设输入格式为 yyyyMMdd
+        #     date_full = date_str
+        return date_str
 
     @staticmethod
     def login_ts():

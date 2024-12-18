@@ -219,10 +219,10 @@ class DataIO():
         def get_valid_date(prompt, has_time):
             while True:
                 date_str = input(prompt).strip()
-                date_full = DataGet.get_date_from_int(date_str, has_time=has_time)
+                date_full = DataGet.get_str_to_datetime(date_str)
                 if has_time =='day':
                     try:
-                        if date_full > datetime.date.today():
+                        if date_full > datetime.datetime.now():
                             print("日期或时间不可晚于当前时间，请重新输入！！！")
                             continue
                         return date_str

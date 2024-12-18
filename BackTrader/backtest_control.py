@@ -113,8 +113,8 @@ class BackTest:
                             EMA26=range(24,27),
                             EMA12=range(12,15),
                             EMA9=range(9,12))'''
-        start_full = DataGet.get_date_from_int(start_date, has_time)
-        end_full = DataGet.get_date_from_int(end_date, has_time)    #  datetime.datetime格式
+        start_full = DataGet.get_str_to_datetime(start_date)
+        end_full = DataGet.get_str_to_datetime(end_date)    #  datetime.datetime格式
         cerebro.addstrategy(Shared_Cash_Pool_Pointing,
                             backtest_start_date=start_full,
                             backtest_end_date=end_full,
