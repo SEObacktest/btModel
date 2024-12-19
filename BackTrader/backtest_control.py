@@ -14,6 +14,7 @@ from shared_cash_peak_valley import Shared_Cash_Peak_Valley
 import pandas as pd
 from backtrader.comminfo import ComminfoFuturesPercent,ComminfoFuturesFixed
 from tools.db_mysql import get_engine
+import time
 
 class BackTest:
     @staticmethod
@@ -88,7 +89,9 @@ class BackTest:
         :param margins: 保证金比例列表
         :param mults: 合约乘数列表
         """
-        cerebro = bt.Cerebro()  # 创建Backtrader回测引擎
+        # 记录开始时间
+        start_time = time.time()
+        cerebro = bt.Cerebro(stdstats=False)  # 创建Backtrader回测引擎
         cerebro.broker.set_coc(True)#启用未来数据
         #cerebro.broker.set_slippage_fixed(1)#固定滑点为1
         BackTestSetup.set_cerebro(cerebro=cerebro, opt_judge=False)  # 设置回测引擎
@@ -105,14 +108,16 @@ class BackTest:
             #上看
             cerebro.broker.addcommissioninfo(comm,name=name)
             #设定参数
+
+        start_full = DataGet.get_str_to_datetime(start_date)
+        end_full = DataGet.get_str_to_datetime(end_date)  # datetime.datetime格式
         '''cerebro.optstrategy(Shared_Cash_Pool_Pointing,
                             backtest_start_date=DataGet.get_date_from_int(start_date),
                             backtest_end_date=DataGet.get_date_from_int(end_date),
                             EMA26=range(24,27),
                             EMA12=range(12,15),
                             EMA9=range(9,12))'''
-        start_full = DataGet.get_str_to_datetime(start_date)
-        end_full = DataGet.get_str_to_datetime(end_date)    #  datetime.datetime格式
+
         cerebro.addstrategy(Shared_Cash_Pool_Pointing,
                             backtest_start_date=start_full,
                             backtest_end_date=end_full,
@@ -130,14 +135,17 @@ class BackTest:
         #with Pool(3) as p:
             #results = p.map(run,params_list)
         
-        cerebro.run(maxcpus=None,optdatas=True,preload=True,runonce=False)#运行回测，使用所有可用的 CPU
+        cerebro.run(maxcpus=12)#运行回测，使用所有可用的 CPU
 
         print("========共享资金池打分回测========")
         print(f"品种：{name_list}")
         print(f"回测区间：{start_full}至{end_full}")
         #DataIO.text_report(cerebro=cerebro, strat=strat)  # 输出回测报告
         print("========共享资金池打分回测========")
-
+        # 记录结束时间并计算总耗时
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+        print("共花费时间：", elapsed_time)
         #pic = Bokeh(style='bar', plot_mode='single', scheme=Tradimo())  # 使用Bokeh绘图
         #cerebro.plot(pic)  # 绘制回测结果'''
 

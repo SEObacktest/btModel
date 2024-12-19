@@ -19,6 +19,8 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
     )
 
     def __init__(self):
+        self.connection = get_engine()
+        self._cache = None  # 初始化缓存为None
         #各种打分用的指标
         columns = ['时间', '合约名', '信号', '单价', '手数', '总价', '手续费', '可用资金','开仓均价','品种浮盈','权益','当日收盘','已缴纳保证金']
         self.num_of_trade=0#总交易次数
@@ -855,14 +857,37 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
         for data in self.datas:
             self.close(data=data)
 
-    def get_margin_percent(self,data):
-        # info=pd.read_csv('datasets/future_codes.csv')
-        connection = get_engine()
-        query = "SELECT * FROM future_codes"
-        info = pd.read_sql(query, con=connection)
-        margin=info[info['wh_code']==data._name]['保证金比例'].iloc[0]#读取保证金比例
-        mult=info[info['wh_code']==data._name]['合约乘数'].iloc[0]#读取合约乘数
-        ans=dict()
-        ans['margin']=margin
-        ans['mult']=mult
-        return ans#回传字典
+    # def get_margin_percent(self,data):
+    #     # info=pd.read_csv('datasets/future_codes.csv')
+    #     connection = get_engine()
+    #     query = "SELECT wh_code, 保证金比例, 合约乘数 FROM future_codes"
+    #     info = pd.read_sql(query, con=connection)
+    #     margin=info[info['wh_code']==data._name]['保证金比例'].iloc[0]#读取保证金比例
+    #     mult=info[info['wh_code']==data._name]['合约乘数'].iloc[0]#读取合约乘数
+    #     ans=dict()
+    #     ans['margin']=margin
+    #     ans['mult']=mult
+    #     return ans#回传字典
+
+
+    def _load_cache(self):
+        """首次调用时加载数据到缓存"""
+        if self._cache is None:
+            query = "SELECT wh_code, 保证金比例, 合约乘数 FROM future_codes"
+            self._cache = pd.read_sql(query, con=self.connection).set_index('wh_code')
+
+    def get_margin_percent(self, data):
+        """
+        获取给定期货品种的保证金比例和合约乘数。
+
+        :param data: 包含期货品种wh_code的对象
+        :return: 包含保证金比例和合约乘数的字典
+        """
+        self._load_cache()  # 确保缓存已加载
+
+        try:
+            wh_code = data._name
+            row = self._cache.loc[wh_code]
+            return {'margin': row['保证金比例'], 'mult': row['合约乘数']}
+        except KeyError:
+            raise ValueError(f"未找到 {wh_code} 的保证金比例或合约乘数")
