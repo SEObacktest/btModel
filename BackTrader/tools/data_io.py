@@ -185,79 +185,98 @@ class DataIO():
     def input_futureInformation():
 
         """
-        交互式地获取用户想要回测的股票名称、回测起始日期和结束日期。
-        :return: 用户选择的股票代码wh_code列表、回测起始日期和结束日期
+        交互式地获取用户想要回测的品种名称、回测起始日期和结束日期。
+        :return: 用户选择的品种代码wh_code列表、回测起始日期和结束日期
         """
-        # 显示股票代码列表并获取股票信息字典
-        # name_dict = DataIO.show_future_codes()
-        # name_dict, alias_to_name= DataIO.show_future_codes_from_mysql()
-        name_dict = DataIO.show_future_codes_from_mysql()
+        # 显示股票信息字典
+        name_dict = show_future_codes_from_mysql()
         wh_codes = list()  # 存储用户选择的股票文华代码
         names = list()  # 存储用户输入的股票名称
+        margins = list()   # 存储用户选择的期货保证金比例
+        mults = list()  # 存储用户选择的期货合约乘数
         print("请对应期货代码表输入，需要回测的期货名称,结束请输入“#” ")
         print("===============================================")
         # 循环获取用户输入的股票名称
-        '''while True:
+        while True:
             name = input("请继续输入：\n").strip()
             if name == "#":
                 break  # 输入'#'表示结束输入
             if name in name_dict:
                 names.append(name)  # 添加到名称列表中
-            if name not in name_dict:
-                # if name in alias_to_name:
-                #     real_name = alias_to_name[name]
-                #     names.append(real_name)
+            else:
                 print("输入期货不存在，请重新输入")
-                continue  # 如果股票名称不存在，提示重新输入'''
-        #建立篮子
-        for name in name_dict:
-            names.append(name)
+                continue  # 如果股票名称不存在，提示重新输入
         # 根据名称列表获取对应的股票文化码
-        for name in names:
-            wh_codes.append(name_dict[name][-1])
-        # 获取回测的起始日期和结束日期
-        while True:
-            if not names:
-                break  # 如果没有选择任何股票，直接退出
-            judge = True
-            try:
-                # 输入回测起始日期
-                start_date = int(input("请按说明格式输入回测起始日期：\n（例如：若为2021年9月10日则应输入：20210910）\n").strip())
-                if start_date == "":
-                    print("输入为空！请重试！！！")
-                    continue
-            except ValueError:
-                print("非法输入！请重试！！！")
-                continue
-            # 检查起始日期是否合法
-            for name in names:
-                if DataGet.get_date_from_int(start_date) > datetime.date.today():
-                    print("起始日期不可晚于今日，请重新输入！！！")
-                    judge = False
-                    break
+        #for name in names:
+        for name in name_dict:
+            if not math.isnan(name_dict[name]['margin']):
+            #if 1:
+                wh_codes.append(name_dict[name]['wh_code'])
+                margins.append(name_dict[name]['margin'])
+                mults.append(name_dict[name]['mult'])
 
-            if not judge:
-                continue  # 如果起始日期不合法，重新输入
+        # 选回测周期
+        period_options = {"1": ('day', 'day'), "2": ('15min', 'min'),"3": ('1min', 'min'),"4": ('5s', 's')}
+        period_input = input("请选择回测周期：\n1.一天\n2.15分钟\n3.1分钟\n4.5秒钟\n").strip()
+        if period_input not in period_options:
+            print("无效选项，请重新运行程序并选择有效选项。")
+            exit()
+        period, has_time = period_options[period_input]
+
+        def get_valid_date(prompt, has_time):
             while True:
-                try:
-                    # 输入回测结束日期
-                    end_date = int(input("请按说明格式输入回测结束日期：\n（例如：若为2021年9月10日则应输入：20210910）\n").strip())
-                    if DataGet.get_date_from_int(end_date) > datetime.date.today():
-                        print("结束日期不可晚于今日，请重新输入！！！")
+                date_str = input(prompt).strip()
+                date_full = DataGet.get_str_to_datetime(date_str)
+                print(type(date_full))
+                if has_time =='day':
+                    try:
+                        if date_full > datetime.datetime.now().date():
+                            print("日期或时间不可晚于当前时间，请重新输入！！！")
+                            continue
+                        return date_str
+                    except ValueError as e:
+                        print(f"解析日期失败: {e}")
                         continue
-                    if end_date < start_date:
-                        print("结束日期不可早于起始日期！！！请重试！！！")
+                elif has_time =='min':
+                    if not date_str.isdigit() or len(date_str) != 12:
+                        print("非法输入！请确保输入为12位数字，格式为：YYYYMMDDHHMM")
                         continue
-                    break  # 结束日期输入正确，退出循环
-                except ValueError:
-                    print("非法输入！请重试！！！")
-                    continue
-            break  # 起始日期和结束日期均输入正确，退出循环
+                    try:
+                        if date_full > datetime.datetime.now():
+                            print("日期或时间不可晚于当前时间，请重新输入！！！")
+                            continue
+                        return date_str
+                    except ValueError as e:
+                        print(f"解析日期失败: {e}")
+                        continue
+                elif has_time == 's':
+                    if not date_str.isdigit() or len(date_str) != 14:
+                        print("非法输入！请确保输入为14位数字，格式为：YYYYMMDDHHMMSS")
+                        continue
+                    try:
+                        if date_full > datetime.datetime.now():
+                            print("日期或时间不可晚于当前时间，请重新输入！！！")
+                            continue
+                        return date_str
+                    except ValueError as e:
+                        print(f"解析日期失败: {e}")
+                        continue
+        while True:
+            start_date = get_valid_date(
+                "请按说明格式输入回测起始日期或时间：\n（例如：若为2024年12月16日15点30分15秒则应输入：20241216153015）\n",
+                has_time)
+
+            end_date = get_valid_date(
+                "请按说明格式输入回测结束日期或时间：\n（例如：若为2024年12月16日15点30分15秒则应输入：20241216153015）\n",
+                has_time)
+            if end_date < start_date:
+                print("结束日期或时间不可早于起始日期或时间！！！请重试！！！")
+            if end_date >= start_date:
+                break
+
         DataIO.start_date=start_date
         DataIO.end_date=end_date
-        config.start_date=start_date
-        config.end_date=end_date
-        return wh_codes,names, start_date, end_date  # 返回股票代码列表和日期
+        return wh_codes,names, start_date, end_date, period, margins, mults  # 返回股票代码列表和日期
  
     @staticmethod
     def add_analysers(cerebro):
@@ -481,65 +500,37 @@ class DataIO():
             except ValueError:
                 log.Log.Log.log("Invalid input. Please enter a valid number.")
 
-    def show_future_codes_from_mysql():
-        """
-        从MySQL数据库中读取所有上市交易的期货代码，并返回期货名称与代码、上市日期的对应字典。
-        :return: 期货名称与其代码和上市日期的字典
-        """
-        connection = get_engine()
-        # 使用pandas读取MySQL数据库中的表 future_codes
-        query = "SELECT * FROM future_codes"
-        data = pd.read_sql(query,con=connection)
-        print(data.columns)
+def show_future_codes_from_mysql():
+    """
+    从MySQL数据库中读取所有上市交易的期货代码，并返回期货名称、保证金比例、合约乘数以及文化码的对应字典。
+    :return: 包含期货名称、保证金比例、合约乘数和文化码的字典
+    """
+    connection = get_engine()
+    # 使用pandas读取MySQL数据库中的表 future_codes
+    query = "SELECT 期货名, 保证金比例, 合约乘数, 别名, wh_code FROM future_codes"
+    data = pd.read_sql(query,con=connection)
 
-        # 设置Pandas显示选项，显示所有列和所有行
-        pd.set_option('display.max_columns', None)
-        pd.set_option('display.max_rows', None)
+    # 打印期货品种代码列表
+    print("===================期货品种代码列表===================")
+    with pd.option_context('display.max_columns', None, 'display.max_rows', None):
+        print(data.iloc[:, :4])  # 打印2前4列
+    print("===============================================")
 
-        # 打印期货品种代码列表
-        print("===================期货品种代码列表===================")
-        print(data.iloc[:, :4])  # 只展示前四列
-        print("===============================================")
+    # 创建一个字典，用于存储期货名称与其代码和上市日期的对应关系
+    name_dict = {
+        row['期货名']:
+            {
+                'name': row['期货名'],
+                'margin': row['保证金比例'],
+                'mult': row['合约乘数'],
+                'alias':row['别名'],
+                'wh_code': row['wh_code']
+            }
+        for _, row in data.iterrows()
+    }
 
-        # 创建一个字典，用于存储期货名称与其代码和上市日期的对应关系
-        name_dict = dict()
-        alias_to_name = {} # 用于期货名到别名的映射
+    return name_dict  # 返回期货信息字典
 
-        # 遍历每一行数据，填充name_dict # 和 alias_to_name
-        for index, row in data.iterrows():
-            information_list = [row['code'], row['期货名'],row['别名'],row['wh_code']]  # 假设表中有'code'和'期货名'这两列
-            name_dict[row['期货名']] = information_list  # 键为期货名称，值为信息列表
-            # if pd.notna(row['别名']):
-            #     # 如果有别名，则将其映射到期货名
-            #     alias_to_name[row['别名']] = row['期货名']
 
-        return name_dict  # ,alias_to_name  # 返回期货信息字典及别名映射
-
-    # @staticmethod
-    # def show_future_codes():
-    #     """
-    #     显示所有上市交易的股票代码，并返回股票名称与代码、上市日期的对应字典。
-    #     :return: 股票名称与其代码和上市日期的字典
-    #     """
-    #     # 设置Pandas显示选项，显示所有列和所有行
-    #     pd.set_option('display.max_columns', None)
-    #     pd.set_option('display.max_rows', None)
-    #     # 读取之前保存的股票代码CSV文件
-    #     data = pd.read_csv("datasets/future_codes.csv", index_col=0)
-    #     # 重命名列名为中文
-    #     # 打印股票代码列表
-    #     print("===================期货品种代码列表===================")
-    #     print(data)
-    #     print("===============================================")
-    #     # 创建一个字典，用于存储股票名称与其代码和上市日期的对应关系
-    #     name_dict = dict()
-    #
-    #     # 遍历每一行数据，填充name_dict
-    #     for index, row in data.iterrows():
-    #         information_list = list()
-    #         information_list.append(row['code'])  # 添加股票代码
-    #         information_list.append(row['期货名'])
-    #         name_dict[row['期货名']] = information_list  # 键为股票名称，值为信息列表
-    #     return name_dict  # 返回股票信息字典
 
 

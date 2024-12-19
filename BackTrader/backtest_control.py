@@ -14,6 +14,10 @@ from shared_cash_peak_valley import Shared_Cash_Peak_Valley
 import pandas as pd
 from backtrader.comminfo import ComminfoFuturesPercent,ComminfoFuturesFixed
 from tools.db_mysql import get_engine
+import time
+from itertools import product
+from multiprocessing import Pool
+from multi import run
 
 class BackTest:
     @staticmethod
@@ -77,29 +81,31 @@ class BackTest:
         print(f"回测区间：{DataGet.get_date_from_int(start_date)}至{DataGet.get_date_from_int(end_date)}")
         # DataIO.text_report(cerebro=cerebro, strat=strat)  # 输出回测报告
         print("========共享资金池打分回测========")'''
-    def shared_cash_fut_pointing_test(code_list,name_list, start_date, end_date):
+    def shared_cash_fut_pointing_test(code_list,name_list, start_date, end_date,period,margins,mults):
         """
         使用共享资金池进行打分回测
+        :param code_list: 品种代码列表
         :param name_list: 品种名称列表
         :param start_date: 回测开始日期
         :param end_date: 回测结束日期
+        :param period: 回测周期
+        :param margins: 保证金比例列表
+        :param mults: 合约乘数列表
         """
-        connection = get_engine()
-        # 从数据库中读取合约信息，保证金比例，手续费比例
-        query = "SELECT * FROM future_codes"
-        info = pd.read_sql(query, con=connection)
-        # info=pd.read_csv('datasets/future_codes.csv')#读取合约信息，保证金比例，手续费比例
-
-        cerebro = bt.Cerebro()  # 创建Backtrader回测引擎
+        # 记录开始时间
+        start_time = time.time()
+        cerebro = bt.Cerebro(stdstats=False)  # 创建Backtrader回测引擎
         cerebro.broker.set_coc(True)#启用未来数据
         #cerebro.broker.set_slippage_fixed(1)#固定滑点为1
         BackTestSetup.set_cerebro(cerebro=cerebro, opt_judge=False)  # 设置回测引擎
+        time1 = time.time()
         DataGet.get_fut_data(cerebro=cerebro,
                              codes=code_list,
-                             )  # 获取数据
-        for name in name_list:
-            margin=info[info['期货名']==name]['保证金比例'].iloc[0]#从DataFrame里面取得保证金
-            mult=info[info['期货名']==name]['合约乘数'].iloc[0]#从DataFrame里面取得合约乘数
+                             period=period)  # 获取数据
+        print('获取数据花费时间：', time1 - start_time)
+        for i,name in enumerate(name_list):
+            margin = margins[i]
+            mult = mults[i]
             comm=ComminfoFuturesPercent(commission=0.0001,margin=margin,mult=mult)
             #comm=ComminfoFuturesPercent(commission=0,margin=margin,mult=mult)
             #把手续费、保证金和合约乘数打包作为一个整体参数，注意这里的
@@ -107,37 +113,48 @@ class BackTest:
             #上看
             cerebro.broker.addcommissioninfo(comm,name=name)
             #设定参数
+
+        start_full = DataGet.get_str_to_datetime(start_date)
+        end_full = DataGet.get_str_to_datetime(end_date)  # datetime.datetime格式
         '''cerebro.optstrategy(Shared_Cash_Pool_Pointing,
                             backtest_start_date=DataGet.get_date_from_int(start_date),
                             backtest_end_date=DataGet.get_date_from_int(end_date),
                             EMA26=range(24,27),
                             EMA12=range(12,15),
                             EMA9=range(9,12))'''
+
         cerebro.addstrategy(Shared_Cash_Pool_Pointing,
-                            backtest_start_date=DataGet.get_date_from_int(start_date),
-                            backtest_end_date=DataGet.get_date_from_int(end_date),
+                            backtest_start_date=start_full,
+                            backtest_end_date=end_full,
                             EMA26=26,
                             EMA12=12,
                             EMA9=9)
         
 
         #创建策略，传递参数：开始日期、结束日期、均线长度
-        #EMA26_list=range(10,20,5)#接下来几行是预备多线并发的参数优化，可以忽略
-        #EMA12_list=range(8,18,5)
-        #EMA9_list=range(5,15,5)
-        #params_list=product(product(EMA26_list,EMA12_list),EMA9_list)
-        #params_list=product(product(params_list,starting_date),ending_date)
-        #with Pool(3) as p:
-            #results = p.map(run,params_list)
+        '''EMA26_list=range(10,20,5)#接下来几行是预备多线并发的参数优化，可以忽略
+        EMA12_list=range(8,18,5)
+        EMA9_list=range(5,15,5)
+        params_list=product(product(EMA26_list,EMA12_list),EMA9_list)
+        params_list=product(product(params_list,start_full),end_full)
+        task_args=[
+            (params,period,margins,mults,code_list,name_list)
+            for params in params_list
+        ]
+        with Pool(3) as p:
+            results = p.starmap(run,task_args)'''
         
-        cerebro.run()#运行回测，只用一个CPU核，避免线程错乱
+        cerebro.run()#运行回测，使用所有可用的 CPU
 
         print("========共享资金池打分回测========")
         print(f"品种：{name_list}")
-        print(f"回测区间：{DataGet.get_date_from_int(start_date)}至{DataGet.get_date_from_int(end_date)}")
+        print(f"回测区间：{start_full}至{end_full}")
         #DataIO.text_report(cerebro=cerebro, strat=strat)  # 输出回测报告
         print("========共享资金池打分回测========")
-
+        # 记录结束时间并计算总耗时
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+        print("花费时间：", elapsed_time)
         #pic = Bokeh(style='bar', plot_mode='single', scheme=Tradimo())  # 使用Bokeh绘图
         #cerebro.plot(pic)  # 绘制回测结果'''
 

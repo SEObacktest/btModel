@@ -5,7 +5,7 @@ from backtrader.comminfo import ComminfoFuturesPercent,ComminfoFuturesFixed
 
 
 
-def setup_cerebro(symbol_list, start_date, end_date):
+def setup_cerebro(symbol_list, start_date, end_date,period,margins,mults):
     cerebro = bt.Cerebro()  # 创建Backtrader回测引擎
     cerebro.broker.set_coc(True)  # 启用未来数据
     cerebro.broker.set_slippage_fixed(1)  # 固定滑点为1
@@ -24,12 +24,33 @@ def setup_cerebro(symbol_list, start_date, end_date):
 
     return cerebro
 
-def run(params):
+def run(params,period,margins,mults,code_list,name_list):
     symbol_list, start_date, end_date, ema26, ema12, ema9 = params
-    cerebro = setup_cerebro(symbol_list, start_date, end_date)
+    start_full = DataGet.get_str_to_datetime(start_date)
+    end_full = DataGet.get_str_to_datetime(end_date)  # datetime.datetime格式
+    #cerebro = setup_cerebro(symbol_list, start_date, end_date)
+    cerebro=bt.Cerebro(stdstats=False)
+    cerebro.broker.set_coc(True)
+    BackTestSetup.set_cerebro(cerebro=cerebro, opt_judge=False) 
     # kwags = {'EMA26':params[0],
     #          'EMA12':params[1],
     #          'EMA9':params[2]}
+    DataGet.get_fut_data(cerebro=cerebro,
+                             codes=code_list,
+                             period=period)  # 获取数据
+    for i,name in enumerate(name_list):
+            margin = margins[i]
+            mult = mults[i]
+            comm=ComminfoFuturesPercent(commission=0.0001,margin=margin,mult=mult)
+            #comm=ComminfoFuturesPercent(commission=0,margin=margin,mult=mult)
+            #把手续费、保证金和合约乘数打包作为一个整体参数，注意这里的
+            #ComminfoFuturesPercent是在库里面重写的方法，源码要在CSDN
+            #上看
+            cerebro.broker.addcommissioninfo(comm,name=name)
+            #设定参数
+
+    start_full = DataGet.get_str_to_datetime(start_date)
+    end_full = DataGet.get_str_to_datetime(end_date)  # datetime.datetime格式
     cerebro.addstrategy(Shared_Cash_Pool_Pointing,
                         backtest_start_date=DataGet.get_date_from_int(start_date),
                         backtest_end_date=DataGet.get_date_from_int(end_date),
