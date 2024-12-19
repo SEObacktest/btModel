@@ -93,8 +93,6 @@ class DataGet:
             从MySQL数据库中获取期货日线数据并添加到Backtrader回测引擎中
             :param codes: 合约wh_code列表
             :param cerebro: Backtrader 回测引擎实例
-            :param start_date: 数据开始日期
-            :param end_date: 数据结束日期
         """
         # 创建数据库连接引擎
         connection = get_engine()

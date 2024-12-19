@@ -192,6 +192,8 @@ class DataIO():
         name_dict = show_future_codes_from_mysql()
         wh_codes = list()  # 存储用户选择的股票文华代码
         names = list()  # 存储用户输入的股票名称
+        margins = list()   # 存储用户选择的期货保证金比例
+        mults = list()  # 存储用户选择的期货合约乘数
         print("请对应期货代码表输入，需要回测的期货名称,结束请输入“#” ")
         print("===============================================")
         # 循环获取用户输入的股票名称
@@ -206,7 +208,9 @@ class DataIO():
                 continue  # 如果股票名称不存在，提示重新输入
         # 根据名称列表获取对应的股票文化码
         for name in names:
-            wh_codes.append(name_dict[name][-1])
+            wh_codes.append(name_dict[name]['wh_code'])
+            margins.append(name_dict[name]['margin'])
+            mults.append(name_dict[name]['mult'])
 
         # 选回测周期
         period_options = {"1": ('day', 'day'), "2": ('15min', 'min'),"3": ('1min', 'min'),"4": ('5s', 's')}
@@ -268,7 +272,7 @@ class DataIO():
 
         DataIO.start_date=start_date
         DataIO.end_date=end_date
-        return wh_codes,names, start_date, end_date, period, has_time  # 返回股票代码列表和日期
+        return wh_codes,names, start_date, end_date, period, margins, mults # 返回股票代码列表和日期
  
     @staticmethod
     def add_analysers(cerebro):
@@ -494,32 +498,44 @@ class DataIO():
 
 def show_future_codes_from_mysql():
     """
-    从MySQL数据库中读取所有上市交易的期货代码，并返回期货名称、上市日期的对应字典。
-    :return: 期货名称与其代码和上市日期的字典
+    从MySQL数据库中读取所有上市交易的期货代码，并返回期货名称、保证金比例、合约乘数以及文化码的对应字典。
+    :return: 包含期货名称、保证金比例、合约乘数和文化码的字典
     """
     connection = get_engine()
     # 使用pandas读取MySQL数据库中的表 future_codes
-    query = "SELECT * FROM future_codes"
+    query = "SELECT 期货名, 保证金比例, 合约乘数, 别名, wh_code FROM future_codes"
     data = pd.read_sql(query,con=connection)
-    print(data.columns)
+    # print(data.columns)
 
     # 设置Pandas显示选项，显示所有列和所有行
-    pd.set_option('display.max_columns', None)
-    pd.set_option('display.max_rows', None)
+    # pd.set_option('display.max_columns', None)
+    # pd.set_option('display.max_rows', None)
 
     # 打印期货品种代码列表
     print("===================期货品种代码列表===================")
-    print(data.iloc[:, 1:4])  # 展示2前4列
+    with pd.option_context('display.max_columns', None, 'display.max_rows', None):
+        print(data.iloc[:, :4])  # 打印2前4列
+    # print(data.iloc[:, 1:4])  # 展示2前4列
     print("===============================================")
 
     # 创建一个字典，用于存储期货名称与其代码和上市日期的对应关系
-    name_dict = dict()
-
-    # 遍历每一行数据，填充name_dict
-    for index, row in data.iterrows():
-        information_list = [row['code'], row['期货名'],row['别名'],row['wh_code']]  # 假设表中有'code'和'期货名'这两列
-        # information_list = [row['code'], row['期货名'], row['保证金比例'], row['合约乘数'], row['别名'], row['wh_code']]
-        name_dict[row['期货名']] = information_list  # 键为期货名称，值为信息列表
+    # name_dict = dict()
+    #
+    # # 遍历每一行数据，填充name_dict
+    # for index, row in data.iterrows():
+    #     # information_list = [row['code'], row['期货名'],row['别名'],row['wh_code']]  # 假设表中有'code'和'期货名'这两列
+    #     information_list = [ row['期货名'], row['保证金比例'], row['合约乘数'], row['别名'], row['wh_code']]
+    #     name_dict[row['期货名']] = information_list  # 键为期货名称，值为信息列表
+    name_dict = {
+        row['期货名']: {
+                'name': row['期货名'],
+                'margin': row['保证金比例'],
+                'mult': row['合约乘数'],
+                'alias':row['别名'],
+                'wh_code': row['wh_code']
+            }
+        for _, row in data.iterrows()
+    }
 
     return name_dict  # 返回期货信息字典
 

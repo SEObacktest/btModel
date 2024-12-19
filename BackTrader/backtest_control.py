@@ -77,19 +77,17 @@ class BackTest:
         print(f"回测区间：{DataGet.get_date_from_int(start_date)}至{DataGet.get_date_from_int(end_date)}")
         # DataIO.text_report(cerebro=cerebro, strat=strat)  # 输出回测报告
         print("========共享资金池打分回测========")'''
-    def shared_cash_fut_pointing_test(code_list,name_list, start_date, end_date,period,has_time):
+    def shared_cash_fut_pointing_test(code_list,name_list, start_date, end_date,period,margins,mults):
         """
         使用共享资金池进行打分回测
+        :param code_list: 品种代码列表
         :param name_list: 品种名称列表
         :param start_date: 回测开始日期
         :param end_date: 回测结束日期
+        :param period: 回测周期
+        :param margins: 保证金比例列表
+        :param mults: 合约乘数列表
         """
-        connection = get_engine()
-        # 从数据库中读取合约信息，保证金比例，手续费比例
-        query = "SELECT * FROM future_codes"
-        info = pd.read_sql(query, con=connection)
-        # info=pd.read_csv('datasets/future_codes.csv')#读取合约信息，保证金比例，手续费比例
-
         cerebro = bt.Cerebro()  # 创建Backtrader回测引擎
         cerebro.broker.set_coc(True)#启用未来数据
         #cerebro.broker.set_slippage_fixed(1)#固定滑点为1
@@ -97,9 +95,9 @@ class BackTest:
         DataGet.get_fut_data(cerebro=cerebro,
                              codes=code_list,
                              period=period)  # 获取数据
-        for name in name_list:
-            margin=info[info['期货名']==name]['保证金比例'].iloc[0]#从DataFrame里面取得保证金
-            mult=info[info['期货名']==name]['合约乘数'].iloc[0]#从DataFrame里面取得合约乘数
+        for i,name in enumerate(name_list):
+            margin = margins[i]
+            mult = mults[i]
             comm=ComminfoFuturesPercent(commission=0.0001,margin=margin,mult=mult)
             #comm=ComminfoFuturesPercent(commission=0,margin=margin,mult=mult)
             #把手续费、保证金和合约乘数打包作为一个整体参数，注意这里的
@@ -136,7 +134,6 @@ class BackTest:
 
         print("========共享资金池打分回测========")
         print(f"品种：{name_list}")
-        # print(f"回测区间：{DataGet.get_date_from_int(start_date,has_time)}至{DataGet.get_date_from_int(end_date,has_time)}")
         print(f"回测区间：{start_full}至{end_full}")
         #DataIO.text_report(cerebro=cerebro, strat=strat)  # 输出回测报告
         print("========共享资金池打分回测========")
