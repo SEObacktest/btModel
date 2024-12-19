@@ -95,9 +95,11 @@ class BackTest:
         cerebro.broker.set_coc(True)#启用未来数据
         #cerebro.broker.set_slippage_fixed(1)#固定滑点为1
         BackTestSetup.set_cerebro(cerebro=cerebro, opt_judge=False)  # 设置回测引擎
+        time1 = time.time()
         DataGet.get_fut_data(cerebro=cerebro,
                              codes=code_list,
                              period=period)  # 获取数据
+        print('获取数据花费时间：', time1 - start_time)
         for i,name in enumerate(name_list):
             margin = margins[i]
             mult = mults[i]
@@ -145,7 +147,7 @@ class BackTest:
         # 记录结束时间并计算总耗时
         end_time = time.time()
         elapsed_time = end_time - start_time
-        print("共花费时间：", elapsed_time)
+        print("花费时间：", elapsed_time)
         #pic = Bokeh(style='bar', plot_mode='single', scheme=Tradimo())  # 使用Bokeh绘图
         #cerebro.plot(pic)  # 绘制回测结果'''
 

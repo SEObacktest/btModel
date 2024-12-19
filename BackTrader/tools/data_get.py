@@ -4,6 +4,7 @@ import datetime
 import pandas as pd
 from db_mysql import get_engine
 from sqlalchemy import text
+from concurrent.futures import ThreadPoolExecutor, as_completed
 class DataGet:
     @staticmethod
     def get_str_to_datetime(date_str):
@@ -88,44 +89,105 @@ class DataGet:
             data = bt.feeds.PandasData(dataname=df)  # 转换为Backtrader的Pandas数据格式
             cerebro.adddata(data, name=code)  # 将数据添加到回测引擎中
 
-    def get_fut_data(codes:list,cerebro:bt.Cerebro,period):
+    # def get_fut_data(codes: list, cerebro: bt.Cerebro, period):
+    #     """
+    #         从MySQL数据库中获取期货日线数据并添加到Backtrader回测引擎中
+    #         :param codes: 合约wh_code列表
+    #         :param cerebro: Backtrader 回测引擎实例
+    #     """
+    #     # 创建数据库连接引擎
+    #     connection = get_engine()
+    #     # name_list = names if isinstance(names, list) else [names]  # 确保names是列表形式
+    #     code_list = codes if isinstance(codes, list) else [codes]  # 确保codes是列表形式
+    #     for code in code_list:
+    #         try:
+    #             # 查找所有表名中包含wh_code的表
+    #             query_tables = f"""
+    #                             SELECT table_name
+    #                             FROM information_schema.tables
+    #                             WHERE table_schema = 'future'
+    #                               AND table_name LIKE '{code}_{period}'
+    #                         """
+    #             tables_result = pd.read_sql(text(query_tables), con=connection)
+    #             if tables_result.empty:
+    #                 print(f"No tables found for wh_code {code}.")
+    #                 break
+    #             for table_name in tables_result['table_name']:
+    #                 # 从每个匹配的表中加载数据
+    #                 query_data = f"SELECT * FROM `{table_name}`"
+    #                 df = pd.read_sql(text(query_data), con=connection)
+    #
+    #                 # 数据预处理
+    #                 df['trade_date'] = pd.to_datetime(df['trade_date'])  # 转换交易日期为日期类型
+    #                 df.set_index('trade_date', inplace=True)  # 将交易日期设为索引
+    #                 df['openinterest'] = 0  # 初始化持仓量为0
+    #                 df = (df[['open', 'high', 'low', 'close', 'vol', 'openinterest']]
+    #                       .rename(columns={'vol': 'volume'}))  # 重命名列
+    #                 df = df.sort_index()  # 按日期排序数据
+    #                 # 转换为Backtrader的Pandas数据格式并添加到回测引擎中
+    #                 data = bt.feeds.PandasData(dataname=df)
+    #                 cerebro.adddata(data, name=code)
+    #
+    #         except Exception as e:
+    #             print(f"Failed to load data for {code}: {e}")
+
+    def get_fut_data(codes:list, cerebro:bt.Cerebro, period):
         """
-            从MySQL数据库中获取期货日线数据并添加到Backtrader回测引擎中
+            从MySQL数据库中获取期货数据并添加到Backtrader回测引擎中
             :param codes: 合约wh_code列表
             :param cerebro: Backtrader 回测引擎实例
+            :param period: 数据周期（例如 'day', '15min' 等）
         """
         # 创建数据库连接引擎
         connection = get_engine()
-        # name_list = names if isinstance(names, list) else [names]  # 确保names是列表形式
         code_list = codes if isinstance(codes, list) else [codes]  # 确保codes是列表形式
-        for code in code_list:
-            try:
-                # 查找所有表名中包含wh_code的表
-                query_tables = f"""
-                                SELECT table_name 
-                                FROM information_schema.tables 
-                                WHERE table_schema = 'future' 
-                                  AND table_name LIKE '{code}_{period}' 
-                            """
-                tables_result = pd.read_sql(text(query_tables), con=connection)
-                if tables_result.empty:
-                    print(f"No tables found for wh_code {code}.")
-                    break
-                for table_name in tables_result['table_name']:
-                    # 从每个匹配的表中加载数据
-                    query_data = f"SELECT * FROM `{table_name}`"
-                    df = pd.read_sql(text(query_data), con=connection)
 
-                    # 数据预处理
-                    df['trade_date'] = pd.to_datetime(df['trade_date'])  # 转换交易日期为日期类型
-                    df.set_index('trade_date', inplace=True)  # 将交易日期设为索引
-                    df['openinterest'] = 0  # 初始化持仓量为0
-                    df = (df[['open', 'high', 'low', 'close', 'vol', 'openinterest']]
-                          .rename(columns={'vol': 'volume'}))  # 重命名列
-                    df = df.sort_index()  # 按日期排序数据
-                    # 转换为Backtrader的Pandas数据格式并添加到回测引擎中
-                    data = bt.feeds.PandasData(dataname=df)
-                    cerebro.adddata(data, name=code)
+        # 构建一个查询，用于找到所有符合条件的表
+        placeholders = ', '.join([f"'{code}_{period}'" for code in code_list])
+        query_tables = f"""
+                SELECT table_name
+                FROM information_schema.tables
+                WHERE table_schema = 'future'
+                  AND table_name IN ({placeholders})
+            """
+
+        tables_result = pd.read_sql(text(query_tables), con=connection)
+
+        if tables_result.empty:
+            print("No tables found for the specified codes and period.")
+            return
+
+        def load_and_process_table(table_name):
+            try:
+                # 从每个匹配的表中加载数据
+                query_data = f"SELECT * FROM `{table_name}`"
+                df = pd.read_sql(text(query_data), con=connection)
+
+                # 数据预处理
+                df['trade_date'] = pd.to_datetime(df['trade_date'])  # 转换交易日期为日期类型
+                df.set_index('trade_date', inplace=True)  # 将交易日期设为索引
+                df['openinterest'] = 0  # 初始化持仓量为0
+                df = (df[['open', 'high', 'low', 'close', 'vol', 'openinterest']]
+                      .rename(columns={'vol': 'volume'}))  # 重命名列
+                df = df.sort_index()  # 按日期排序数据
+
+                # 获取合约代码
+                code = table_name.rsplit('_', 1)[0]
+                data = bt.feeds.PandasData(dataname=df)
+                cerebro.adddata(data, name=code)
 
             except Exception as e:
-                print(f"Failed to load data for {code}: {e}")
+                print(f"Failed to load data for {table_name}: {e}")
+
+        # 使用线程池并发加载和处理表格
+        with ThreadPoolExecutor(max_workers=12) as executor:
+            futures = {executor.submit(load_and_process_table, table_name): table_name for table_name in
+                       tables_result['table_name']}
+            for future in as_completed(futures):
+                table_name = futures[future]
+                try:
+                    future.result()
+                except Exception as exc:
+                    print(f"{table_name} generated an exception: {exc}")
+
+
