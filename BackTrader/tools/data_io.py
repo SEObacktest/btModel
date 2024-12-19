@@ -197,7 +197,7 @@ class DataIO():
         print("请对应期货代码表输入，需要回测的期货名称,结束请输入“#” ")
         print("===============================================")
         # 循环获取用户输入的股票名称
-        while True:
+        '''while True:
             name = input("请继续输入：\n").strip()
             if name == "#":
                 break  # 输入'#'表示结束输入
@@ -208,7 +208,10 @@ class DataIO():
                 #     real_name = alias_to_name[name]
                 #     names.append(real_name)
                 print("输入期货不存在，请重新输入")
-                continue  # 如果股票名称不存在，提示重新输入
+                continue  # 如果股票名称不存在，提示重新输入'''
+        #建立篮子
+        for name in name_dict:
+            names.append(name)
         # 根据名称列表获取对应的股票文化码
         for name in names:
             wh_codes.append(name_dict[name][-1])

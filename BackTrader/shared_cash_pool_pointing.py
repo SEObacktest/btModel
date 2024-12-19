@@ -137,7 +137,7 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
                             total_value=total_value+self.paper_profit[data1]
                 
                         total_value+=self.cash
-                        self.info.loc[self.num_of_all]=[self.current_date,data2._name,"不交易",0,0,0,0,round(self.cash),round(self.average_open_cost[data2]),round(self.paper_profit[data2]),round(total_value),data2.close[0],round(total_margin),None]
+                        self.info.loc[self.num_of_all]=[current_date,data2._name,"不交易",0,0,0,0,round(self.cash),round(self.average_open_cost[data2]),round(self.paper_profit[data2]),round(total_value),data2.close[0],round(total_margin),None]
                         self.num_of_all+=1#临时充当dataframe的行数
                         #注意到这其实影响了真正的交易次数
                     #就算不交易，也需要重新计算保证金
@@ -152,7 +152,7 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
                 total_value=total_value+self.paper_profit[data1]
                 
             total_value+=self.cash
-            self.info.loc[self.num_of_all]=[self.current_date,"ALL",None,0,0,0,0,round(self.cash),None,None,round(total_value),None,round(total_margin),None]
+            self.info.loc[self.num_of_all]=[current_date,"ALL",None,0,0,0,0,round(self.cash),None,None,round(total_value),None,round(total_margin),None]
             self.num_of_all+=1#临时充当dataframe的行数
 
             for data2 in self.datas:
@@ -281,13 +281,13 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
             win_rate_2=(1+win_lose_ratio)*win_rate
             if math.isinf(win_rate_2):
                 win_rate_2=float('inf')
-            self.report.loc[0,'胜率']=win_rate
+            self.report.loc[0,'胜率']=win_rate*100
             self.report.loc[0,'总交易次数']=self.total_trade_time
             self.report.loc[0,'盈亏比']=win_lose_ratio
             self.report.loc[0,'胜率盈亏']=win_rate_2
             self.report.loc[0,'盈利次数']=self.win_time
             self.report.loc[0,'亏损次数']=self.lose_time
-            self.report.loc[0,'年化单利']=(float(self.total_value-self.init_cash)/self.init_cash)*(252.0/self.total_days)
+            self.report.loc[0,'年化单利']=(float(self.total_value-self.init_cash)/self.init_cash)*(252.0/self.total_days)*100
             self.report.to_csv('report.csv',index=True,mode='w',encoding='utf-8')
         self.info.to_csv('signal_info.csv',index=True,mode='w',encoding='utf-8')
 
@@ -1031,7 +1031,7 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
             margin_percent=margin_mult['margin']
             mult=margin_mult['mult']
             #lots=(fund*0.04)/(data.close[0]*margin_percent*mult)
-            lots=1
+            lots=10
             if self.DIFF[data][-1]<=self.DEA[data][-1] and self.DIFF[data][0]>self.DEA[data][0]:
                 #CROSSUP
                 '''if self.MACDtest==0:
