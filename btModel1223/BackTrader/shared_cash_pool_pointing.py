@@ -103,14 +103,15 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
             #         #输出各种指标
 
             for data2 in self.datas:
-                margin_mult=self.get_margin_percent(data2)
-                margin_percent=margin_mult['margin']
-                future_name = margin_mult['future_name']
-                mult=margin_mult['mult']#提取保证金比例和合约乘数
-                position_size = self.getposition(data2).size
-                position_size_abs = abs(position_size)
-                close_value = data2.close[0]
                 if self.is_trade[data2]==False:#如果找到了今天没有交易的品种
+                    margin_mult=self.get_margin_percent(data2)
+                    #margin_percent=margin_mult['margin']
+                    future_name = margin_mult['future_name']
+                    mult=margin_mult['mult']#提取保证金比例和合约乘数
+                    position_size = self.getposition(data2).size
+                    position_size_abs = abs(position_size)
+                    close_value = data2.close[0]
+                #if self.is_trade[data2]==False:#如果找到了今天没有交易的品种
                     if position_size>0:#如果持多仓
                         self.paper_profit[data2]=(close_value-self.average_open_cost[data2])*position_size_abs*mult
                         #就算不交易，还是有浮盈的变化
@@ -127,7 +128,8 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
                         self.total_value+=self.cash
                         self.info.loc[self.num_of_all]=[current_date,future_name,"不交易",0,0,0,0,round(self.cash),round(self.average_open_cost[data2]),round(self.paper_profit[data2]),round(self.total_value),data2.close[0],round(total_margin),None]
                         self.num_of_all+=1#临时充当dataframe的行数
-                    elif self.getposition(data2).size<0:#如果持空仓
+                    #elif self.getposition(data2).size<0:#如果持空仓
+                    elif position_size<0:
                         self.paper_profit[data2]=-(close_value-self.average_open_cost[data2])*position_size_abs*mult
                         #margin=abs(self.getposition(data2).size)*abs(data2.close[0])*mult*margin_percent
                         #self.margin[data2]=margin
@@ -194,15 +196,16 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
             # 注意到就算当天没有交易的品种仍然会有浮动盈亏,也会对权益产生影响。
             # 怎么判断该品种今天有没有交易?在next中引入一个dict来保存
             for data2 in self.datas:
-                margin_mult = self.get_margin_percent(data2)
-                margin_percent = margin_mult['margin']
-                future_name = margin_mult['future_name']
-                mult = margin_mult['mult']  # 提取保证金比例和合约乘数
-                position = self.getposition(data2)
-                positon_size = position.size
-                positon_size_abs = abs(positon_size)
-                close_value = data2.close[0]
                 if self.is_trade[data2] == False:  # 如果找到了今天没有交易的品种
+                    margin_mult = self.get_margin_percent(data2)
+                    #margin_percent = margin_mult['margin']
+                    future_name = margin_mult['future_name']
+                    mult = margin_mult['mult']  # 提取保证金比例和合约乘数
+                    position = self.getposition(data2)
+                    positon_size = position.size
+                    positon_size_abs = abs(positon_size)
+                    close_value = data2.close[0]
+                #if self.is_trade[data2] == False:  # 如果找到了今天没有交易的品种
                     if positon_size > 0:  # 如果持多仓
                         self.paper_profit[data2] = (close_value - self.average_open_cost[data2]) * positon_size_abs * mult
                         # 就算不交易，还是有浮盈的变化
@@ -319,9 +322,12 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
             data=order.data#获取这笔订单对应的品类
             self.is_trade[data]=True#记录该品类今天有交易
             current_time=self.datetime.date(0)#时间
-            dataname=order.data._name#合约名称
+            #dataname=order.data._name#合约名称
+            dataname=data.cnname#中文名称
             unit_price=order.executed.price#单价
+            abs_unit_price=abs(unit_price)
             trade_nums=order.executed.size#手数
+            abs_trade_nums=abs(trade_nums)
             trade_value=0#总价,这个要独立计算
             #trade_value=order.margin
             trade_comm=abs(order.executed.comm)
@@ -349,10 +355,10 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
                 if order.isbuy():#如果是买单，注意买单分四种：开多/加多/平空/减空
 
                     Log.log(
-                    f"订单完成:买单,{data.cnname}, 手数:{(order.executed.size)},"
-                    f"每手价格:{order.executed.price:.2f},"
+                    f"订单完成:买单,{dataname}, 手数:{(trade_nums)},"
+                    f"每手价格:{unit_price:.2f},"
                     #f"总价格:{(order.executed.value):.2f},"
-                    f"手续费:{order.executed.comm:.2f},"
+                    f"手续费:{trade_comm:.2f},"
                     f"该品种现有持仓:{position_size}",
                     dt=current_time
                     )
@@ -367,12 +373,12 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
                         #total_value=self.broker.get_value()
                         if self.order_list[data][-2]==0:#开多仓
                             trade_type="开多仓"
-                            self.log[data]=self.log[data]+abs(order.executed.price)*abs(order.executed.size)
+                            self.log[data]=self.log[data]+abs_unit_price*abs_trade_nums
                             #统计开仓总成本
                             self.average_open_cost[data]=abs(self.log[data]/(position_size))
                             #在该订单执行完毕后，更新此笔交易的平均开仓成本(以收盘价计)
                             #注意这里不要以保证金计，要用收盘价计
-                            margin=abs(order.executed.price)*abs(order.executed.size)*mult*margin_percent
+                            margin=abs_unit_price*abs_trade_nums*mult*margin_percent
                             margin=abs(margin)
                             #本次开仓的保证金
                             self.margin[data]+=margin
@@ -390,9 +396,9 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
 
                         else:
                             trade_type="加多仓"
-                            self.log[data]=self.log[data]+abs(order.executed.price)*abs(order.executed.size)
+                            self.log[data]=self.log[data]+abs_unit_price*abs_trade_nums
                             #增加成本
-                            margin=abs(order.executed.price)*abs(order.executed.size)*mult*margin_percent
+                            margin=abs_unit_price*abs_trade_nums*mult*margin_percent
                             margin=abs(margin)
                             #此次操作多加的保证金
                             self.margin[data]+=margin
@@ -429,16 +435,16 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
                             #减掉手续费
                             if unit_price<self.average_open_cost[data]:
                             #如果现在的收盘价小于平均开仓成本，说明空头盈利
-                                self.cash+=abs(order.executed.size)*abs(unit_price-self.average_open_cost[data])*mult
+                                self.cash+=abs_trade_nums*abs(unit_price-self.average_open_cost[data])*mult
                                 #盈利额=手数*|(收盘价-平均开仓成本)|*乘数
-                                close_profit=abs(order.executed.size)*abs(unit_price-self.average_open_cost[data])*mult
+                                close_profit=abs_trade_nums*abs(unit_price-self.average_open_cost[data])*mult
                                 self.win_time+=1#盈利次数+1
                                 self.total_profit+=abs(close_profit)#记录盈利
                             else:
                             #如果现在的收盘价大于等于平均开仓成本，说明空头亏损(至少是不盈利)
-                                self.cash-=abs(order.executed.size)*abs(unit_price-self.average_open_cost[data])*mult
+                                self.cash-=abs_trade_nums*abs(unit_price-self.average_open_cost[data])*mult
                                 #亏损额=手数*|(收盘价-平均开仓成本)|*乘数
-                                close_profit=-abs(order.executed.size)*abs(unit_price-self.average_open_cost[data])*mult
+                                close_profit=-abs_trade_nums*abs(unit_price-self.average_open_cost[data])*mult
                                 self.lose_time+=1#亏损次数+1
                                 self.total_loss+=abs(close_profit)#记录亏损
 
@@ -450,29 +456,29 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
                             trade_type="减空仓"
                             self.total_trade_time+=1
                             #margin=abs(order.executed.price)*abs(order.executed.size)*mult*margin_percent
-                            margin=self.margin[data]*abs(order.executed.value)/abs(self.order_list[data][-2])
+                            margin=self.margin[data]*abs_trade_nums/abs(self.order_list[data][-2])
                             #减仓释放的保证金
                             self.margin[data]-=margin
                             #更新保证金
                             self.cash=self.cash+abs(margin)
                             #可用现金要加上退回来的保证金
-                            self.cash=self.cash-abs(trade_comm)
+                            self.cash=self.cash-trade_comm
                             #减去手续费
                             self.log[data]=self.log[data]-abs(order.executed.size)*self.average_open_cost[data]
                             #减仓时候要把减的那些手的开仓成本从总成本当中去掉
                             trade_value=margin
                             if unit_price<self.average_open_cost[data]:
                                 #如果现在的收盘价小于平均开仓成本，说明空头盈利
-                                self.cash+=abs(order.executed.size)*abs(unit_price-self.average_open_cost[data])*mult
-                                close_profit=abs(order.executed.size)*abs(abs(unit_price)-abs(self.average_open_cost[data]))*mult
+                                self.cash+=abs_trade_nums*abs(unit_price-self.average_open_cost[data])*mult
+                                close_profit=abs_trade_nums*abs(abs_unit_price-abs(self.average_open_cost[data]))*mult
                                 #盈利额=手数*|(收盘价-平均开仓成本)|*乘数
                                 self.win_time+=1#盈利次数+1
                                 self.total_profit+=abs(close_profit)#记录盈利
                             else:
                             #如果现在的收盘价大于等于平均开仓成本，说明空头亏损(至少是不盈利)
-                                self.cash-=abs(order.executed.size)*abs(unit_price-self.average_open_cost[data])*mult
+                                self.cash-=abs_trade_nums*abs(unit_price-self.average_open_cost[data])*mult
                                 #亏损额=手数*|(收盘价-平均开仓成本)|*乘数
-                                close_profit=-abs(order.executed.size)*abs(abs(unit_price)-abs(self.average_open_cost[data]))*mult
+                                close_profit=-abs_trade_nums*abs(abs_unit_price-abs(self.average_open_cost[data]))*mult
                                 self.lose_time+=1
                                 self.total_loss+=abs(close_profit)#记录亏损
                             self.paper_profit[data]=-(data.close[0]-self.average_open_cost[data])*position_size_abs*mult
@@ -489,11 +495,11 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
                 
                 elif order.issell():#卖单的情况，同上
                     Log.log(
-                    f"订单完成:卖单,{data.cnname},手数:{(order.executed.size)},"
-                    f"每手价格:{order.executed.price:.2f},"
+                    f"订单完成:卖单,{dataname},手数:{trade_nums},"
+                    f"每手价格:{unit_price:.2f},"
                     #f"总价格:{(order.executed.value):.2f},"
-                    f"手续费:{order.executed.comm:.2f},"
-                    f"该品种现有持仓:{self.getposition(data).size}",
+                    f"手续费:{trade_comm:.2f},"
+                    f"该品种现有持仓:{position_size}",
                     dt=current_time
                     )
                     self.order_list[data].append(position_size)
@@ -510,20 +516,20 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
                             margin=self.margin[data]
                             #平仓释放保证金
                             self.cash=self.cash+abs(margin)#现金要加上退回来的保证金
-                            self.cash=self.cash-abs(trade_comm)
+                            self.cash=self.cash-trade_comm
                             self.margin[data]=0
                             #平仓了，该品类保证金归零
                             #减去手续费
                             if self.average_open_cost[data]<unit_price:#如果平均开仓成本<收盘价，说明多头盈利
-                                self.cash+=abs(order.executed.size)*abs(abs(unit_price)-abs(self.average_open_cost[data]))*mult
+                                self.cash+=abs_trade_nums*abs(abs_unit_price-abs(self.average_open_cost[data]))*mult
                                 #盈利额=手数*|(收盘价-平均开仓成本)|*乘数
-                                close_profit=abs(order.executed.size)*abs(abs(unit_price)-abs(self.average_open_cost[data]))*mult
+                                close_profit=abs_trade_nums*abs(abs_unit_price-abs(self.average_open_cost[data]))*mult
                                 self.win_time+=1#盈利次数+1
                                 self.total_profit+=abs(close_profit)#记录盈利
                             else:#如果平均开仓成本>=收盘价，说明多头不盈利
-                                self.cash-=abs(order.executed.size)*abs(abs(unit_price)-abs(self.average_open_cost[data]))*mult
+                                self.cash-=abs_trade_nums*abs(abs_unit_price-abs(self.average_open_cost[data]))*mult
                                 #亏损额=手数*|(收盘价-平均开仓成本)|*乘数
-                                close_profit=-abs(order.executed.size)*abs(abs(unit_price)-abs(self.average_open_cost[data]))*mult
+                                close_profit=-abs_trade_nums*abs(abs_unit_price-abs(self.average_open_cost[data]))*mult
                                 self.lose_time+=1#亏损次数+1
                                 self.total_loss+=abs(close_profit)#记录亏损
                             flag=1#平仓之后要把总成本和平均持仓成本全部变成0
@@ -532,27 +538,27 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
                         else:
                             trade_type="减多仓"
                             self.total_trade_time+=1
-                            self.log[data]=self.log[data]-abs(order.executed.size)*self.average_open_cost[data]
+                            self.log[data]=self.log[data]-abs_trade_nums*self.average_open_cost[data]
                             #注意：减多仓要把减的那些手的开仓成本去掉，不然影响后面的计算
-                            margin=self.margin[data]*abs(order.executed.size)/self.order_list[data][-2]
+                            margin=self.margin[data]*abs_trade_nums/self.order_list[data][-2]
                             #平仓释放的保证金
                             self.margin[data]-=margin
                             #平仓该品种保证金减少一部分
                             self.paper_profit[data]=(close_value-self.average_open_cost[data])*position_size_abs*mult
                             #浮盈=(收盘价-开仓均价)*持仓手数*乘数
                             self.cash=self.cash+abs(margin)#现金要加上退回来的保证金
-                            self.cash=self.cash-abs(trade_comm)
+                            self.cash=self.cash-trade_comm
                             #减去手续费
                             if self.average_open_cost[data]<unit_price:#如果平均开仓成本<收盘价，说明多头盈利
-                                self.cash+=abs(order.executed.size)*abs(unit_price-self.average_open_cost[data])*mult
+                                self.cash+=abs_trade_nums*abs(unit_price-self.average_open_cost[data])*mult
                                 #盈利额=手数*|(收盘价-平均开仓成本)|*乘数
-                                close_profit=abs(order.executed.size)*abs(abs(unit_price)-abs(self.average_open_cost[data]))*mult
+                                close_profit=abs_trade_nums*abs(abs_unit_price-abs(self.average_open_cost[data]))*mult
                                 self.win_time+=1#盈利次数+1
                                 self.total_profit+=abs(close_profit)#记录盈利
                             else:#如果平均开仓成本>=收盘价，说明多头不盈利
-                                self.cash-=abs(order.executed.size)*abs(unit_price-self.average_open_cost[data])*mult
+                                self.cash-=abs_trade_nums*abs(unit_price-self.average_open_cost[data])*mult
                                 #亏损额=手数*|(收盘价-平均开仓成本)|*乘数
-                                close_profit=-abs(order.executed.size)*abs(abs(unit_price)-abs(self.average_open_cost[data]))*mult
+                                close_profit=-abs_trade_nums*abs(abs_unit_price-abs(self.average_open_cost[data]))*mult
                                 self.lose_time+=1#亏损次数+1
                                 self.total_loss+=abs(close_profit)#记录亏损
                             trade_value=margin
@@ -564,15 +570,15 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
                         #total_value=self.broker.get_value()
                         if self.order_list[data][-2]==0:
                             trade_type="开空仓"
-                            self.log[data]=self.log[data]+abs(order.executed.price)*abs(order.executed.size)
+                            self.log[data]=self.log[data]+abs_unit_price*abs_trade_nums
                             self.average_open_cost[data]=abs(self.log[data]/(position_size))
                             self.paper_profit[data]=-(abs(close_value)-abs(self.average_open_cost[data]))*position_size_abs*mult
                             #开空仓，浮盈是0
-                            margin=abs(order.executed.price)*abs(order.executed.size)*mult*margin_percent
+                            margin=abs_unit_price*abs_trade_nums*mult*margin_percent
                             #开仓存入的保证金
                             self.margin[data]=margin
                             self.cash-=margin
-                            self.cash-=abs(trade_comm)
+                            self.cash-=trade_comm
                             #可用资金(现金)的变化:要减掉交出的保证金和手续费
                             #记录浮盈
                             #在该订单执行完毕后，更新此笔交易的平均开仓成本(以收盘价计)
@@ -580,13 +586,13 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
                             trade_value=margin
                         else:
                             trade_type="加空仓"
-                            self.log[data]=self.log[data]+abs(order.executed.price)*abs(order.executed.size)
+                            self.log[data]=self.log[data]+abs_unit_price*abs_trade_nums
                             #更新开仓成本
-                            margin=abs(order.executed.price)*abs(order.executed.size)*mult*margin_percent
+                            margin=abs_unit_price*abs_trade_nums*mult*margin_percent
                             #开仓存入的保证金
                             self.margin[data]+=margin
                             self.cash-=margin
-                            self.cash-=abs(trade_comm)
+                            self.cash-=trade_comm
                             self.average_open_cost[data]=abs(self.log[data]/(position_size))
                             self.paper_profit[data]=-(close_value-self.average_open_cost[data])*position_size_abs*mult
                             #浮盈=-(收盘价-开仓均价)*持仓手数*乘数
@@ -609,16 +615,16 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
                         #减掉手续费
                         if unit_price<self.average_open_cost[data]:
                         #如果现在的收盘价小于平均开仓成本，说明空头盈利
-                            self.cash+=abs(order.executed.size)*abs(unit_price-self.average_open_cost[data])*mult
+                            self.cash+=abs_trade_nums*abs(unit_price-self.average_open_cost[data])*mult
                             #盈利额=手数*|(收盘价-平均开仓成本)|*乘数
-                            close_profit=abs(order.executed.size)*abs(abs(unit_price)-abs(self.average_open_cost[data]))*mult
+                            close_profit=abs_trade_nums*abs(abs_unit_price-abs(self.average_open_cost[data]))*mult
                             self.win_time+=1#盈利次数+1
                             self.total_profit+=abs(close_profit)#记录盈利
                         else:
                         #如果现在的收盘价大于等于平均开仓成本，说明空头亏损(至少是不盈利)
-                            self.cash-=abs(order.executed.size)*abs(unit_price-self.average_open_cost[data])*mult
+                            self.cash-=abs_trade_nums*abs(unit_price-self.average_open_cost[data])*mult
                             #亏损额=手数*|(收盘价-平均开仓成本)|*乘数
-                            close_profit=-abs(order.executed.size)*abs(abs(unit_price)-abs(self.average_open_cost[data]))*mult
+                            close_profit=-abs_trade_nums*abs(abs_unit_price-abs(self.average_open_cost[data]))*mult
                             self.lose_time+=1#亏损次数+1
                             self.total_loss+=abs(close_profit)#记录亏损
                         trade_value=margin#该笔交易总额:退回来的保证金
@@ -643,16 +649,16 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
                         #减掉手续费
                         if unit_price>self.average_open_cost[data]:
                         #如果平仓价大于平均开仓成本，说明多头盈利
-                            self.cash+=abs(order.executed.size)*abs(unit_price-self.average_open_cost[data])*mult
+                            self.cash+=abs_trade_nums*abs(unit_price-self.average_open_cost[data])*mult
                             #盈利额=手数*|(收盘价-平均开仓成本)|*乘数
-                            close_profit=abs(order.executed.size)*abs(abs(unit_price)-abs(self.average_open_cost[data]))*mult
+                            close_profit=abs_trade_nums*abs(abs_unit_price-abs(self.average_open_cost[data]))*mult
                             self.win_time+=1#盈利次数+1
                             self.total_profit+=abs(close_profit)#记录盈利
                         else:
                         #如果现在的收盘价大于等于平均开仓成本，说明空头亏损(至少是不盈利)
-                            self.cash-=abs(order.executed.size)*abs(unit_price-self.average_open_cost[data])*mult
+                            self.cash-=abs_trade_nums*abs(unit_price-self.average_open_cost[data])*mult
                             #亏损额=手数*|(收盘价-平均开仓成本)|*乘数
-                            close_profit=-abs(order.executed.size)*abs(abs(unit_price)-abs(self.average_open_cost[data]))*mult
+                            close_profit=-abs_trade_nums*abs(abs_unit_price-abs(self.average_open_cost[data]))*mult
                             self.lose_time+=1#亏损次数+1
                             self.total_profit+=abs(close_profit)#记录亏损
                         trade_value=margin#该笔交易总额:退回来的保证金
@@ -705,7 +711,7 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
 
     def shared_cash_pointing(self):#具体的策略（打分方式是随便写的）
         self.point=dict()#字典当打分表，记录每个品种的打分情况
-        current_date=self.datetime.date(0)
+        #current_date=self.datetime.date(0)
         for data in self.datas:#满足一个指标就加一分
             #if current_date>self.getdatabyname(data._name).datetime.date(0):  
             if 1:
@@ -750,8 +756,10 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
         self.point=dict()#字典当打分表，记录每个品种的打分情况
         # current_date=self.datetime.date(0)
         current_date = self.datas[0].datetime.datetime(0)
+        pre_date=self.getdatabyname(data._name).datetime.datetime(0)
         for data in self.datas:#满足一个指标就加一分
-            if current_date>=self.getdatabyname(data._name).datetime.datetime(0):
+            #if current_date>=self.getdatabyname(data._name).datetime.datetime(0):
+            if current_date>=pre_date:
                 self.point[data._name]=0
                 if round(self.DIFF[data][0],2)>round(self.DEA[data][0],2) and round(self.DIFF[data][-1],2)<=round(self.DEA[data][-1],2):
                     self.point[data._name]+=3
