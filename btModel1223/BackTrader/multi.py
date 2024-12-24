@@ -2,6 +2,7 @@ from shared_cash_pool_pointing import Shared_Cash_Pool_Pointing
 from tools.data_io import *
 from backtest_setup import BackTestSetup
 from backtrader.comminfo import ComminfoFuturesPercent,ComminfoFuturesFixed
+from shared_cash_pool_pointing_opt import Shared_Cash_Pool_Pointing_Opt
 import time
 
 
@@ -31,7 +32,7 @@ def run(params):
     kwags = {'EMA26':params[0],
              'EMA12':params[1],
              'EMA9':params[2]}
-    cerebro.addstrategy(Shared_Cash_Pool_Pointing,
+    cerebro.addstrategy(Shared_Cash_Pool_Pointing_Opt,
                         backtest_start_date=start_full,
                         backtest_end_date=end_full,
                         EMA26=ema26,
