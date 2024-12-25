@@ -1,10 +1,9 @@
-import backtrader as bt
 from backtrader.indicators import *
 from datetime import time
-import AddPos
-import DataIO
-import BuyAndSell
-import Log_Func
+from strategies.shared_cash_logic import SharedLogic
+from tools import data_get,data_io,log_func
+import backtrader as bt
+
 class Shared_cash_pool(bt.Strategy):
     """
     共享资金池策略类，主要用于管理多个品种的买卖决策，策略基于不同的技术指标。
@@ -14,6 +13,7 @@ class Shared_cash_pool(bt.Strategy):
         """
         初始化共享资金池策略中的指标，确保每个品种的技术指标独立计算。
         """
+        self.logic=SharedLogic()
         self.sma5 = dict()  # 5日简单移动平均
         self.ema15 = dict()  # 15日指数加权移动平均
         self.bolling_top = dict()  # 布林带上轨
@@ -57,9 +57,9 @@ class Shared_cash_pool(bt.Strategy):
         每个时间步执行共享资金池策略。
         """
         if self.update_percent_judge==0:
-            DataIO.DataIO.change_target_percent(self)
+            data_io.DataIO.change_target_percent(self)
             self.update_percent_judge+=1
-        self.shared_cash()  # 执行共享资金池策略
+        self.logic.shared_cash(self)
 
 
     def notify_order(self, order):
@@ -75,7 +75,7 @@ class Shared_cash_pool(bt.Strategy):
             if order.status in [order.Completed]:
                 data=order.data
                 if order.isbuy():  # 买入订单完成
-                    Log_Func.Log.log(self,
+                    log_func.Log.log(self,
                     f"BUY EXECUTED,{data._name}, Size:{order.executed.size},"
                     f"Price:{order.executed.price:.2f},"
                     f"Cost:{order.executed.value:.2f},"
@@ -84,7 +84,7 @@ class Shared_cash_pool(bt.Strategy):
                 elif order.issell() or order.isclose():  # 卖出订单完成
                     #net_proceeds=order.executed.value-order.executed.comm
                     #self.proceeds+=net_proceeds
-                    Log_Func.Log.log(self,
+                    log_func.Log.log(self,
                     f"SELL EXECUTED,{data._name},Size:{order.executed.size},"
                     f"Price:{order.executed.price:.2f},"
                     f"Cost:{order.executed.value:.2f},"
@@ -95,44 +95,16 @@ class Shared_cash_pool(bt.Strategy):
                     #if self.getposition(data).size==0:
                     #self.allocate_proceeds(net_proceeds,sold_data=data)
             elif order.status is order.Canceled:
-                Log_Func.Log.log(self,'ORDER CANCELED')
+                log_func.Log.log(self,'ORDER CANCELED')
             elif order.status is order.Rejected:
-                Log_Func.Log.log(self,'ORDER REJECTED')
+                log_func.Log.log(self,'ORDER REJECTED')
             elif order.status is order.Margin:
-                Log_Func.Log.log(self,'ORDER MARGIN')
+                log_func.Log.log(self,'ORDER MARGIN')
         else:
             pass
-
-    def shared_cash(self):
-        """
-        根据共享资金池策略的条件进行每个品种的买入或卖出。
-        """
-        
-        for data in self.datas:
-            pos=self.getposition(data).size
-            if pos<=0:
-                size=self.calculate_quantity(data)
-                BuyAndSell.Buy_And_Sell_Strategy.buy_function(self,line=data,size=size)
-                #BuyAndSell.Buy_And_Sell_Strategy.open_short_function(self,line=data,size=size)
-            else:
-                size=self.calculate_quantity(data)
-                BuyAndSell.Buy_And_Sell_Strategy.sell_function(self,line=data,size=size)
-                #BuyAndSell.Buy_And_Sell_Strategy.close_short_function(self,line=data)
-        AddPos.addpos.rebalance_long_positions(self)
-        AddPos.addpos.rebalance_short_positions(self)
-
-    
-    def calculate_quantity(self, line) -> int:
-        """
-        根据可用资金计算每次交易的数量。
-        """
-        available_cash=self.broker.getcash()*0.05
-        close_price=line.close[0]
-        quantity=int(available_cash/close_price)
-        return quantity
     
     def stop(self):
-        Log_Func.Log.log(self,f'Total Proceeds from Sell Orders:{self.proceeds:.2f}')
+        log_func.Log.log(self,f'Total Proceeds from Sell Orders:{self.proceeds:.2f}')
 
     def print_position(self, line) -> None:
         """

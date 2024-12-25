@@ -1,4 +1,13 @@
+<<<<<<< HEAD
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ProjectRootManager" version="2" project-jdk-name="Python 3.12 (btModel-main)" project-jdk-type="Python SDK" />
+=======
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="Black">
+    <option name="sdkName" value="BackTrader" />
+  </component>
+  <component name="ProjectRootManager" version="2" project-jdk-name="TongliangE" project-jdk-type="Python SDK" />
+>>>>>>> 89baaa4 (Normalize line endings)
 </project>
