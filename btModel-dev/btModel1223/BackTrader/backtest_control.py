@@ -16,10 +16,19 @@ from backtrader.comminfo import ComminfoFuturesPercent,ComminfoFuturesFixed
 from tools.db_mysql import get_engine
 import time
 from itertools import product
-from multiprocessing import Pool
+from multiprocessing import Pool,cpu_count
+import psutil
 from multi import run
 
 class BackTest:
+    @staticmethod
+    def get_optimal_cpu_count():
+        logical_cores=cpu_count()
+        physical_cores=psutil.cpu_count(logical=False)
+        reserved_cores=2
+        optimal_cores=logical_cores-reserved_cores
+        return max(1,optimal_cores)
+
     @staticmethod
     def preload_data(code_list, period):
         """预加载数据到缓存"""
@@ -85,7 +94,9 @@ class BackTest:
                                for ema26, ema12, ema9 in product(EMA26_list, EMA12_list, EMA9_list)]
         # params = [(code_list, name_list, start_full, end_full, period, margins, mults, ema26)
         #                        for ema26 in product(EMA26_list)]
-        with Pool(12) as p:
+        optimal_cores=DataGet.get_optimal_cpu_count()
+        print(f"使用{optimal_cores}个CPU核心进行回测")
+        with Pool(optimal_cores) as p:
             results = p.map(run, params_combinations)
         # df = pd.DataFrame(results, columns=['EMA26', 'EMA12', 'EMA9'])
         df = pd.DataFrame(results, columns=['EMA26'])

@@ -68,8 +68,8 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
             self.MACDtest[data]=0
             data.cnname=self.get_margin_percent(data)['future_name']
             c=data.close
-            self.profit[data.cnname]=0#各品类初始化为0
-            self.profit_contribution[data.cnname]=0
+            self.profit[data]=0#各品类初始化为0
+            self.profit_contribution[data]=0
             self.first_date[data]=None
             self.EMA26[data]=Indicators.CustomEMA(c,period=self.params.EMA26)
             self.EMA12[data]=Indicators.CustomEMA(c,period=self.params.EMA12)
@@ -286,13 +286,13 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
         #考虑我们计算每个品种利润的方式，初始的时候，利润是0，如果有开仓，就减掉开仓成本，如果有
         #平仓，就加上平仓收益，由于到了最后一天可能上一笔开仓未平，我们要把这最后一笔开仓成本
         #通过当天(最后一天)的收盘价释放出来，实际上就是一个模拟平仓的过程
-        for data in self.datas:#遍历所有品种
+        '''for data in self.datas:#遍历所有品种
             position_size = self.getposition(data).size
             position_size_abs = abs(position_size)
             close_value = data.close[0]
             if position_size!=0:#如果有持仓
                 self.profit[data.cnname]+=position_size_abs*abs(close_value)
-                #调整利润
+                #调整利润'''
         self.calculate_contribution()
         #计算各个品种对于总利润的贡献
         param_info=[]
@@ -456,6 +456,7 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
                                 close_profit=abs_trade_nums*abs(unit_price-self.average_open_cost[data])*mult
                                 self.win_time+=1#盈利次数+1
                                 self.total_profit+=abs(close_profit)#记录盈利
+                                self.profit[data]+=abs(close_profit)
                             else:
                             #如果现在的收盘价大于等于平均开仓成本，说明空头亏损(至少是不盈利)
                                 self.cash-=abs_trade_nums*abs(unit_price-self.average_open_cost[data])*mult
@@ -463,7 +464,7 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
                                 close_profit=-abs_trade_nums*abs(unit_price-self.average_open_cost[data])*mult
                                 self.lose_time+=1#亏损次数+1
                                 self.total_loss+=abs(close_profit)#记录亏损
-
+                                self.profit[data]-=abs(close_profit)
                             trade_value=margin#该笔交易总额:退回来的保证金
                             flag=1#平仓之后要把总成本和平均持仓成本全部变成0
                             self.paper_profit[data]=0
@@ -490,6 +491,7 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
                                 #盈利额=手数*|(收盘价-平均开仓成本)|*乘数
                                 self.win_time+=1#盈利次数+1
                                 self.total_profit+=abs(close_profit)#记录盈利
+                                self.profit[data]+=abs(close_profit)
                             else:
                             #如果现在的收盘价大于等于平均开仓成本，说明空头亏损(至少是不盈利)
                                 self.cash-=abs_trade_nums*abs(unit_price-self.average_open_cost[data])*mult
@@ -497,6 +499,7 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
                                 close_profit=-abs_trade_nums*abs(abs_unit_price-abs(self.average_open_cost[data]))*mult
                                 self.lose_time+=1
                                 self.total_loss+=abs(close_profit)#记录亏损
+                                self.profit[data]-=abs(close_profit)
                             self.paper_profit[data]=-(data.close[0]-self.average_open_cost[data])*position_size_abs*mult
                             #浮盈=-(收盘价-开仓均价)*持仓手数*乘数
 
@@ -542,12 +545,14 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
                                 close_profit=abs_trade_nums*abs(abs_unit_price-abs(self.average_open_cost[data]))*mult
                                 self.win_time+=1#盈利次数+1
                                 self.total_profit+=abs(close_profit)#记录盈利
+                                self.profit[data]+=abs(close_profit)
                             else:#如果平均开仓成本>=收盘价，说明多头不盈利
                                 self.cash-=abs_trade_nums*abs(abs_unit_price-abs(self.average_open_cost[data]))*mult
                                 #亏损额=手数*|(收盘价-平均开仓成本)|*乘数
                                 close_profit=-abs_trade_nums*abs(abs_unit_price-abs(self.average_open_cost[data]))*mult
                                 self.lose_time+=1#亏损次数+1
                                 self.total_loss+=abs(close_profit)#记录亏损
+                                self.profit[data]-=abs(close_profit)
                             flag=1#平仓之后要把总成本和平均持仓成本全部变成0
                             trade_value=margin
 
@@ -571,12 +576,14 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
                                 close_profit=abs_trade_nums*abs(abs_unit_price-abs(self.average_open_cost[data]))*mult
                                 self.win_time+=1#盈利次数+1
                                 self.total_profit+=abs(close_profit)#记录盈利
+                                self.profit[data]+=abs(close_profit)
                             else:#如果平均开仓成本>=收盘价，说明多头不盈利
                                 self.cash-=abs_trade_nums*abs(unit_price-self.average_open_cost[data])*mult
                                 #亏损额=手数*|(收盘价-平均开仓成本)|*乘数
                                 close_profit=-abs_trade_nums*abs(abs_unit_price-abs(self.average_open_cost[data]))*mult
                                 self.lose_time+=1#亏损次数+1
                                 self.total_loss+=abs(close_profit)#记录亏损
+                                self.profit[data]-=abs(close_profit)
                             trade_value=margin
 
 
@@ -636,6 +643,7 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
                             close_profit=abs_trade_nums*abs(abs_unit_price-abs(self.average_open_cost[data]))*mult
                             self.win_time+=1#盈利次数+1
                             self.total_profit+=abs(close_profit)#记录盈利
+                            self.profit[data]+=abs(close_profit)
                         else:
                         #如果现在的收盘价大于等于平均开仓成本，说明空头亏损(至少是不盈利)
                             self.cash-=abs_trade_nums*abs(unit_price-self.average_open_cost[data])*mult
@@ -643,6 +651,7 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
                             close_profit=-abs_trade_nums*abs(abs_unit_price-abs(self.average_open_cost[data]))*mult
                             self.lose_time+=1#亏损次数+1
                             self.total_loss+=abs(close_profit)#记录亏损
+                            self.profit[data]-=abs(close_profit)
                         trade_value=margin#该笔交易总额:退回来的保证金
                         flag=1#平仓之后要把总成本和平均持仓成本全部变成0
                         self.paper_profit[data]=0
@@ -670,6 +679,7 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
                             close_profit=abs_trade_nums*abs(abs_unit_price-abs(self.average_open_cost[data]))*mult
                             self.win_time+=1#盈利次数+1
                             self.total_profit+=abs(close_profit)#记录盈利
+                            self.profit[data]+=abs(close_profit)
                         else:
                         #如果现在的收盘价大于等于平均开仓成本，说明空头亏损(至少是不盈利)
                             self.cash-=abs_trade_nums*abs(unit_price-self.average_open_cost[data])*mult
@@ -677,6 +687,7 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
                             close_profit=-abs_trade_nums*abs(abs_unit_price-abs(self.average_open_cost[data]))*mult
                             self.lose_time+=1#亏损次数+1
                             self.total_profit+=abs(close_profit)#记录亏损
+                            self.profit[data]-=abs(close_profit)
                         trade_value=margin#该笔交易总额:退回来的保证金
                         flag=1#平仓之后要把总成本和平均持仓成本全部变成0
                         self.paper_profit[data]=0
@@ -1026,18 +1037,18 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
         #计算品种贡献度，其实就是每个品种的利润/总利润(注意下正负号就行)
         total_profit=0
         for data in self.datas:
-            total_profit+=abs(self.profit[data.cnname])
+            total_profit+=abs(self.profit[data])
 
         if total_profit!=0:
             for data in self.datas:
-                if self.profit[data.cnname]>=0 and total_profit>0:
-                    self.profit_contribution[data.cnname]=self.profit[data.cnname]/total_profit
-                elif self.profit[data.cnname]>=0 and total_profit<0:
-                    self.profit_contribution[data.cnname]=abs(self.profit[data.cnname]/total_profit)
-                elif self.profit[data.cnname]<=0 and total_profit>0:
-                    self.profit_contribution[data.cnname]=(-1)*abs(self.profit[data.cnname]/total_profit)
+                if self.profit[data]>=0 and total_profit>0:
+                    self.profit_contribution[data]=self.profit[data]/total_profit
+                elif self.profit[data]>=0 and total_profit<0:
+                    self.profit_contribution[data]=abs(self.profit[data]/total_profit)
+                elif self.profit[data]<=0 and total_profit>0:
+                    self.profit_contribution[data]=(-1)*abs(self.profit[data]/total_profit)
                 elif self.profit[data.cnname]<=0 and total_profit<0:
-                    self.profit_contribution[data.cnname]=(-1)*abs(self.profit[data.cnname]/total_profit)
+                    self.profit_contribution[data]=(-1)*abs(self.profit[data]/total_profit)
 
 
     def cal_next_bar_is_last_trading_day(self,data):

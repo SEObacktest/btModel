@@ -8,6 +8,8 @@ import pandas as pd
 import Indicators
 import datetime
 from tools.db_mysql import get_engine
+import psutil
+import gc
 class Shared_Cash_Pool_Pointing_Opt(bt.Strategy):
     #初始化参数，这些参数在策略被实例化的实话会重新通过实参传入
     params = (
@@ -268,6 +270,7 @@ class Shared_Cash_Pool_Pointing_Opt(bt.Strategy):
                 self.paper_profit[data] = 0  # 一个bar完了之后要重置浮盈'''
 
     def stop(self):
+        self.check_and_clear_memory()
         #stop模块，在最后一天结束后执行，整个回测过程只执行一次
         #最后一天结束后，把持仓品类的权益释放出来加到各个品种利润上面
         #考虑我们计算每个品种利润的方式，初始的时候，利润是0，如果有开仓，就减掉开仓成本，如果有
@@ -1071,6 +1074,12 @@ class Shared_Cash_Pool_Pointing_Opt(bt.Strategy):
         except KeyError:
             raise ValueError(f"未找到 {wh_code} 的保证金比例或合约乘数")
         
+    def check_and_clear_memory(self):
+        current_memory_usage=psutil.virtual_memory().percent
+        if current_memory_usage>50:
+            self._cache=None
+            gc.collect()
+
     def test_MACD(self):
         for data in self.datas:
             fund=10000000
