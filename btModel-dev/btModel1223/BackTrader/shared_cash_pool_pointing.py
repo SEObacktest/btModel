@@ -88,26 +88,31 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
         #举个例子，A品种从1月1号开始有数据，B品种从3月1号开始有数据。
         #回测从1月1号开始，我们当然希望从1月1号开始先回测A品种，等3月1号开始
         #再把B品种加进来，这种有数据断层的时间我们就要通过prenext来执行
-
+        test_data=self.datas[0]
         current_date = self.datetime.date(0)#获取回测当天的时间(模拟时间)
 
         # current_date = self.datas[0].datetime.datetime(0)
         # print(current_date)
         #如果模拟时间在回测区间内
         if self.params.backtest_start_date <= current_date <= self.params.backtest_end_date:
+            #if current_date==self.params.backtest_end_date:
+            if self.cal_next_bar_is_last_trading_day(test_data):
+                self.close_all_position()
+            else:
             #self.shared_cash_pointing_prenext()#执行具体的策略
-            self.total_days+=1
-            self.test_MACD()
+            
+                self.total_days+=1
+                self.test_MACD()
             #self.easy_test()
             for data in self.datas:#遍历每个品种
                #这一行目前有争议，逻辑不清，但是可以实现功能，先保留
-               if current_date>=self.getdatabyname(data._name).datetime.date(0):
+               '''if current_date>=self.getdatabyname(data._name).datetime.date(0):
                    Log.log(f'{data._name}的收盘价:{data.close[0]}',dt=current_date)
                    Log.log(f'{data._name}的指标,EMA26:{self.EMA26[data][0]},',dt=current_date)
                    Log.log(f'{data._name}的指标,EMA12:{self.EMA12[data][0]},',dt=current_date)
                    Log.log(f'{data._name}的指标,DIFF:{self.DIFF[data][0]},',dt=current_date)
                    Log.log(f'{data._name}的指标,DEA:{self.DEA[data][0]},',dt=current_date)
-                   Log.log(f'{data._name}的指标,MACD:{self.MACD[data][0]},',dt=current_date)
+                   Log.log(f'{data._name}的指标,MACD:{self.MACD[data][0]},',dt=current_date)'''
             #         #输出各种指标
 
             for data2 in self.datas:
@@ -174,14 +179,19 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
     def next(self):
         #next模块，接上面的例子，从3月1号开始A和B都有数据了，那么就开始执行next模块
         #prenext模块和next模块是循环执行的，这个策略是日线模型，那么就是每天执行一次
+        test_data=self.datas[0]
         current_date = self.datas[0].datetime.date(0)
         #current_date = self.datas[0].datetime.datetime(0)
 
         if self.params.backtest_start_date <= current_date <= self.params.backtest_end_date:
-            self.total_days+=1
+            #if current_date==self.params.backtest_end_date:
+            if self.cal_next_bar_is_last_trading_day(test_data):
+                self.close_all_position()
+            else:
+                self.total_days+=1
+                self.test_MACD()
             #同上
             #self.shared_cash_pointing()#执行策略
-            self.test_MACD()
             #self.easy_test()
             #同上
             for data in self.datas:
@@ -1032,12 +1042,13 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
 
     def cal_next_bar_is_last_trading_day(self,data):
         try:
-            next_next_close = data.close[2]
-        except IndexError:
-            return True
-        except:
-            print("something else error")
-        return False
+            next_next_day=data.datetime.date(1)
+            if next_next_day>=self.params.backtest_end_date:
+                return True
+            else:
+                return False
+        except IndexError or ValueError:
+            return False
     
     def last_trading_day(self,data):
         try:

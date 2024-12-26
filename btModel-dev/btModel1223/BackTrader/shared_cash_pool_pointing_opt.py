@@ -52,7 +52,7 @@ class Shared_Cash_Pool_Pointing_Opt(bt.Strategy):
         self.is_trade=dict()
         #标记每天每个品种是否有交易
         self.test=1
-        self.MACDtest=0
+        self.MACDtest=dict()
         self.total_trade_time=0#总交易次数
         self.win_time=0#盈利的次数
         self.lose_time=0#亏损的次数
@@ -76,21 +76,24 @@ class Shared_Cash_Pool_Pointing_Opt(bt.Strategy):
             self.average_open_cost[data]=0
             self.margin[data]=0#这个来记录现在已经缴纳的保证金
             self.is_trade[data]=False#初始化是没有交易
+            self.MACDtest[data]=0
     def prenext(self):
         #prenext模块，这个模块用来执行当“只有部分品种有数据”的时候的回测。
         #举个例子，A品种从1月1号开始有数据，B品种从3月1号开始有数据。
         #回测从1月1号开始，我们当然希望从1月1号开始先回测A品种，等3月1号开始
         #再把B品种加进来，这种有数据断层的时间我们就要通过prenext来执行
-
+        test_data=self.datas[0]
         current_date = self.datetime.date(0)#获取回测当天的时间(模拟时间)
 
         # current_date = self.datas[0].datetime.datetime(0)
         # print(current_date)
         #如果模拟时间在回测区间内
         if self.params.backtest_start_date <= current_date <= self.params.backtest_end_date:
-            #self.shared_cash_pointing_prenext()#执行具体的策略
-            self.total_days+=1
-            self.test_MACD()
+            if self.cal_next_bar_is_last_trading_day(test_data):
+                self.close_all_position()
+            else:
+                self.total_days+=1
+                self.test_MACD()
             # for data in self.datas:#遍历每个品种
             #     #这一行目前有争议，逻辑不清，但是可以实现功能，先保留
             #     if current_date>=self.getdatabyname(data._name).datetime.date(0):
@@ -1026,13 +1029,13 @@ class Shared_Cash_Pool_Pointing_Opt(bt.Strategy):
 
     def cal_next_bar_is_last_trading_day(self,data):
         try:
-            next_next_close = data.close[2]
-        except IndexError:
-            return True
-        except:
-            print("something else error")
-        return False
-    
+            next_next_day=data.datetime.date(1)
+            if next_next_day>=self.params.backtest_end_date:
+                return True
+            else:
+                return False
+        except IndexError or ValueError:
+            return False
     def last_trading_day(self,data):
         try:
             next_close=data.close[1]
@@ -1078,18 +1081,18 @@ class Shared_Cash_Pool_Pointing_Opt(bt.Strategy):
             lots=10
             if self.DIFF[data][-1]<=self.DEA[data][-1] and self.DIFF[data][0]>self.DEA[data][0]:
                 #CROSSUP
-                '''if self.MACDtest==0:
+                if self.MACDtest[data]==0:
                     self.buy(data=data,size=lots)
-                    self.MACDtest=1
-                elif self.getposition(data).size<0:'''
-                self.close(data=data)
-                self.buy(data=data,size=lots)
+                    self.MACDtest[data]=1
+                elif self.getposition(data).size<0:
+                    self.close(data=data)
+                    self.buy(data=data,size=lots)
 
             if self.DIFF[data][-1]>self.DEA[data][-1] and self.DIFF[data][0]<=self.DEA[data][0]:
                 #CROSSDOWN
-                '''if self.MACDtest==0:
+                if self.MACDtest==0:
                     self.sell(data=data,size=lots)
-                    self.MACDtest=1
-                elif self.getposition(data).size>0:'''
-                self.close(data=data)
-                self.sell(data=data,size=lots)
+                    self.MACDtest[data]=1
+                elif self.getposition(data).size>0:
+                    self.close(data=data)
+                    self.sell(data=data,size=lots)
