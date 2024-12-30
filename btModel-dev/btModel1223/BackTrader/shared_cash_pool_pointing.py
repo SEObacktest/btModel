@@ -16,6 +16,7 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
         ('EMA26',None),
         ('EMA12',None),
         ('EMA9',None),
+        ('NdayHigh',None),
     )
 
     def __init__(self):
@@ -39,6 +40,7 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
         self.cash=100000000#初始资金
         self.DIFF=dict()#MACD策略当中的DIFF指标
         self.MACD=dict()#MACD策略当中的MACD指标
+        self.NDayHigh=dict()#存放N日内最高价
         self.notify_flag=1#控制订单打印的BOOL变量
         self.profit=dict()#分品类保存利润的字典
         self.profit_contribution=dict()#分品类保存利润贡献度的字典
@@ -68,6 +70,7 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
             self.MACDtest[data]=0
             data.cnname=self.get_margin_percent(data)['future_name']
             c=data.close
+            h=data.high
             self.profit[data]=0#各品类初始化为0
             self.profit_contribution[data]=0
             self.first_date[data]=None
@@ -76,6 +79,7 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
             self.DIFF[data]=self.EMA12[data]-self.EMA26[data]
             self.DEA[data] =Indicators.CustomEMA(self.DIFF[data], period=self.params.EMA9)
             self.MACD[data]=2*(self.DIFF[data]-self.DEA[data])
+            self.NDayHigh[data]=Indicators.NDayHigh(h,period=5)
             self.order_list[data]=[0]
             self.paper_profit[data]=0
             self.log[data]=0
@@ -195,12 +199,12 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
             #self.easy_test()
             #同上
             for data in self.datas:
-                Log.log(f'{data._name}的收盘价:{data.close[0]}',dt=current_date)
+                '''Log.log(f'{data._name}的收盘价:{data.close[0]}',dt=current_date)
                 Log.log(f'{data._name}的指标,EMA26:{self.EMA26[data][0]},',dt=current_date)
                 Log.log(f'{data._name}的指标,EMA12:{self.EMA12[data][0]},',dt=current_date)
                 Log.log(f'{data._name}的指标,DIFF:{self.DIFF[data][0]},',dt=current_date)
                 Log.log(f'{data._name}的指标,DEA:{self.DEA[data][0]},',dt=current_date)
-                Log.log(f'{data._name}的指标,MACD:{self.MACD[data][0]},',dt=current_date)
+                Log.log(f'{data._name}的指标,MACD:{self.MACD[data][0]},',dt=current_date)'''
                 # position_size = self.getposition(data).size
                 # close_value = data.close[0]
                 # hold_equity=position_size*close_value
@@ -1047,7 +1051,7 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
                     self.profit_contribution[data]=abs(self.profit[data]/total_profit)
                 elif self.profit[data]<=0 and total_profit>0:
                     self.profit_contribution[data]=(-1)*abs(self.profit[data]/total_profit)
-                elif self.profit[data.cnname]<=0 and total_profit<0:
+                elif self.profit[data]<=0 and total_profit<0:
                     self.profit_contribution[data]=(-1)*abs(self.profit[data]/total_profit)
 
 
@@ -1104,6 +1108,7 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
             #mult=margin_mult['mult']
             #lots=(fund*0.04)/(data.close[0]*margin_percent*mult)
             lots=10
+            Log.log(f"{data2.cnname}的{self.params.NdayHigh}日内最高价:{self.NDayHigh[data2][0]}")
             if self.DIFF[data2][-1]<=self.DEA[data2][-1] and self.DIFF[data2][0]>self.DEA[data2][0]:
                 #CROSSUP
                 if self.MACDtest[data2]==0:
@@ -1125,3 +1130,21 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
     def easy_test(self):
         for data in self.datas:
             self.buy(data,size=1)
+
+#计算板块指数 均线分数
+    def index_and_MA_points(self):
+        for data in self.datas:
+            if data.cnname=="沪镍加权":
+                c=data.close[0]
+                h=data.high[0]
+                l=data.low[0]
+            hunie_TR=Indicators.TR(data)
+            hunie_ATR=Indicators.ATR(data)
+            hunie_QUAR1_ATR=(hunie_ATR[0]-hunie_ATR[-1])/hunie_ATR[-1]
+#均线分数
+    def SMA_points(self,data):
+        c=data.close
+        SMA5=Indicators.CustomSMA(c,period=5)
+        SMA10=Indicators.CustomSMA(c,period=10)
+        SMA20=Indicators.CustomSMA(c,period=20)
+        SMA40=Indicators.CustomSMA(c,period=40)
