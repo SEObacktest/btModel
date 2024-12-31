@@ -115,6 +115,7 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
             self.margin[data]=0#这个来记录现在已经缴纳的保证金
             self.is_trade[data]=False#初始化是没有交易
         self.index_and_MA_points()
+
     def prenext(self):
         #prenext模块，这个模块用来执行当“只有部分品种有数据”的时候的回测。
         #举个例子，A品种从1月1号开始有数据，B品种从3月1号开始有数据。
@@ -127,6 +128,7 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
         # print(current_date)
         #如果模拟时间在回测区间内
         if self.params.backtest_start_date <= current_date <= self.params.backtest_end_date:
+            #Log.log(f"今天操作了",dt=current_date)
             #if current_date==self.params.backtest_end_date:
             if self.cal_next_bar_is_last_trading_day(test_data):
                 self.close_all_position()
@@ -217,6 +219,7 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
         #current_date = self.datas[0].datetime.datetime(0)
 
         if self.params.backtest_start_date <= current_date <= self.params.backtest_end_date:
+            #Log.log(f"今天操作了",dt=current_date)
             #if current_date==self.params.backtest_end_date:
             if self.cal_next_bar_is_last_trading_day(test_data):
                 self.close_all_position()
@@ -1289,11 +1292,11 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
         QC_SUM=self.hulv_QC[0]+self.huxi_QC[0]+self.hunie_QC[0]+self.huxin_QC[0]+self.hutong_QC[0]+self.gongyegui_QC[0]
         ATR_SUM=self.hulv_QUAR1_ATR[0]+self.huxi_QUAR1_ATR[0]+self.hunie_QUAR1_ATR[0]+self.huxin_QUAR1_ATR[0]+self.hutong_QUAR1_ATR[0]+self.gongyegui_QUAR1_ATR[0]
         QGROUP_ATR=ATR_SUM/QC_SUM
-        #Log.log(f"今天的HuNie_TR:{self.hunie_TR[0]}",dt=current_date)
-        #Log.log(f"今天的HuXi_TR:{self.huxi_TR[0]}",dt=current_date)
-        #Log.log(f"今天的Gongyegui_TR:{self.gongyegui_TR[0]}",dt=current_date)
-        #Log.log(f"今天的Huxin_TR:{self.huxin_TR[0]}",dt=current_date)
-        #Log.log(f"今天的Hulv_TR:{self.hulv_TR[0]}",dt=current_date)
+        # Log.log(f"今天的HuNie_TR:{self.hunie_TR[0]}",dt=current_date)
+        # Log.log(f"今天的HuXi_TR:{self.huxi_TR[0]}",dt=current_date)
+        # Log.log(f"今天的Gongyegui_TR:{self.gongyegui_TR[0]}",dt=current_date)
+        # Log.log(f"今天的Huxin_TR:{self.huxin_TR[0]}",dt=current_date)
+        # Log.log(f"今天的Hulv_TR:{self.hulv_TR[0]}",dt=current_date)
 
         #Log.log(f"今天的HuNie_ATR:{self.get_indicator_value(self.hunie_ATR)}", dt=current_date)
         #Log.log(f"今天的HuXi_ATR:{self.get_indicator_value(self.huxi_ATR)}", dt=current_date)

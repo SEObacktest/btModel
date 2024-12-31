@@ -188,8 +188,8 @@ class ATR(bt.Indicator):
             raise
 
         # 设置最小周期
-        max_period=max(self.params.ATR_period1,self.params.ATR_period2,self.params.ATR_period3)
-        self.addminperiod(max_period)
+        #max_period=max(self.params.ATR_period1,self.params.ATR_period2,self.params.ATR_period3)
+        #self.addminperiod(max_period)
 
 
     def prenext(self):
