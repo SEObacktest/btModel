@@ -195,7 +195,7 @@ class DataIO():
         margins = list()   # 存储用户选择的期货保证金比例
         mults = list()  # 存储用户选择的期货合约乘数
         CN_names=list()#中文名字
-        print("请对应期货代码表输入，需要回测的期货名称,结束请输入“#” ")
+        '''print("请对应期货代码表输入，需要回测的期货名称,结束请输入“#” ")
         print("===============================================")
         # 循环获取用户输入的股票名称
         while True:
@@ -209,7 +209,7 @@ class DataIO():
                 continue  # 如果股票名称不存在，提示重新输入
         # print(names)
         # 根据名称列表获取对应的股票文化码
-        #for name in names:
+        #for name in names:'''
         for name in name_dict:
         
             # if not math.isnan(name_dict[name]['margin']):
@@ -282,7 +282,107 @@ class DataIO():
         DataIO.end_date=end_date
         return wh_codes,names, start_date, end_date, period, margins, mults,CN_names  # 返回股票代码列表和日期
 
+    @staticmethod 
+    def input_futureInformation_single():#手动添加回测项
 
+        """
+        交互式地获取用户想要回测的品种名称、回测起始日期和结束日期。
+        :return: 用户选择的品种代码wh_code列表、回测起始日期和结束日期
+        """
+        # 显示股票信息字典
+        name_dict = show_future_codes_from_mysql()
+        wh_codes = list()  # 存储用户选择的股票文华代码
+        names1 = list()  # 存储用户输入的股票名称
+        margins = list()   # 存储用户选择的期货保证金比例
+        mults = list()  # 存储用户选择的期货合约乘数
+        CN_names=list()#中文名字
+        names2=list()
+        print("请对应期货代码表输入，需要回测的期货名称,结束请输入“#” ")
+        print("===============================================")
+        # 循环获取用户输入的股票名称
+        while True:
+            name = input("请继续输入：\n").strip()
+            if name == "#":
+                break  # 输入'#'表示结束输入
+            if name in name_dict:
+                names1.append(name)  # 添加到名称列表中
+            else:
+                print("输入期货不存在，请重新输入")
+                continue  # 如果股票名称不存在，提示重新输入
+        # print(names)
+        # 根据名称列表获取对应的股票文化码
+        for name in names1:
+        #for name in name_dict:
+        
+            # if not math.isnan(name_dict[name]['margin']):
+            # #if 1:
+            wh_codes.append(name_dict[name]['wh_code'])
+            margins.append(name_dict[name]['margin'])
+            mults.append(name_dict[name]['mult'])
+            names2.append(name_dict[name]['name'])
+
+        # 选回测周期
+        period_options = {"1": ('day', 'day'), "2": ('15min', 'min'),"3": ('1min', 'min'),"4": ('5s', 's')}
+        period_input = input("请选择回测周期：\n1.一天\n2.15分钟\n3.1分钟\n4.5秒钟\n").strip()
+        if period_input not in period_options:
+            print("无效选项，请重新运行程序并选择有效选项。")
+            exit()
+        period, has_time = period_options[period_input]
+
+        def get_valid_date(prompt, has_time):
+            while True:
+                date_str = input(prompt).strip()
+                date_full = DataGet.get_str_to_datetime(date_str)
+                # print(type(date_full))
+                if has_time =='day':
+                    try:
+                        if date_full > datetime.datetime.now().date():
+                            print("日期或时间不可晚于当前时间，请重新输入！！！")
+                            continue
+                        return date_str
+                    except ValueError as e:
+                        print(f"解析日期失败: {e}")
+                        continue
+                elif has_time =='min':
+                    if not date_str.isdigit() or len(date_str) != 12:
+                        print("非法输入！请确保输入为12位数字，格式为：YYYYMMDDHHMM")
+                        continue
+                    try:
+                        if date_full > datetime.datetime.now():
+                            print("日期或时间不可晚于当前时间，请重新输入！！！")
+                            continue
+                        return date_str
+                    except ValueError as e:
+                        print(f"解析日期失败: {e}")
+                        continue
+                elif has_time == 's':
+                    if not date_str.isdigit() or len(date_str) != 14:
+                        print("非法输入！请确保输入为14位数字，格式为：YYYYMMDDHHMMSS")
+                        continue
+                    try:
+                        if date_full > datetime.datetime.now():
+                            print("日期或时间不可晚于当前时间，请重新输入！！！")
+                            continue
+                        return date_str
+                    except ValueError as e:
+                        print(f"解析日期失败: {e}")
+                        continue
+        while True:
+            start_date = get_valid_date(
+                "请按说明格式输入回测起始日期或时间：\n（例如：若为2024年12月16日15点30分15秒则应输入：20241216153015）\n",
+                has_time)
+
+            end_date = get_valid_date(
+                "请按说明格式输入回测结束日期或时间：\n（例如：若为2024年12月16日15点30分15秒则应输入：20241216153015）\n",
+                has_time)
+            if end_date < start_date:
+                print("结束日期或时间不可早于起始日期或时间！！！请重试！！！")
+            if end_date >= start_date:
+                break
+
+        DataIO.start_date=start_date
+        DataIO.end_date=end_date
+        return wh_codes,names2, start_date, end_date, period, margins, mults,CN_names  # 返回股票代码列表和日期
     @staticmethod
     def add_analysers(cerebro):
         """
