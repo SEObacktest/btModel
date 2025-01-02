@@ -60,4 +60,3 @@ websocket-client==1.6.1
 Werkzeug==3.0.6
 yfinance==0.2.50
 zipp==3.20.2
-cachetools==5.5.0
