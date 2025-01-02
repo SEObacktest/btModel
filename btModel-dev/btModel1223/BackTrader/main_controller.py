@@ -34,7 +34,7 @@ class MainController:
                                                        )
                 return'''
             if pick == '3':
-                try:
+                #try:
                     wh_codes, names, start_date, end_date, period, margins, mults, CN_names = DataIO.input_futureInformation()
                     print(f"获取到的期货代码: {wh_codes}")
                     print(f"期货名称: {names}")
@@ -50,8 +50,8 @@ class MainController:
                         margins=margins,
                         mults=mults
                     )
-                except Exception as e:
-                    print(f"执行回测时发生错误: {str(e)}")
+                #except Exception as e:
+                    #print(f"执行回测时发生错误: {str(e)}")
             if pick == '2':
                 wh_codes, names, start_date, end_date, period, margins, mults,CN_names = DataIO.input_futureInformation()
                 BackTest.shared_cash_fut_pointing_test(code_list=wh_codes,

@@ -85,9 +85,11 @@ class BackTest:
     def shared_cash_fut_pointing_mutil(code_list, name_list, start_date, end_date, period, margins, mults):
         start_time = time.time()
         BackTest.preload_data(code_list, period)
+
         EMA26_list = range(10, 20, 5)  # 接下来几行是预备多线并发的参数优化，可以忽略
         EMA12_list=range(8,18,5)
         EMA9_list=range(5,15,5)
+
         A_list=range(22,24,1)
         B_list=range(22,24,1)
 
@@ -105,7 +107,7 @@ class BackTest:
         with Pool(8) as p:
             results = p.map(run, params_combinations)
         # df = pd.DataFrame(results, columns=['EMA26', 'EMA12', 'EMA9'])
-        df = pd.DataFrame(results, columns=['EMA26'])
+        #df = pd.DataFrame(results, columns=['EMA26'])
         # df.to_csv("./result/共享资金池打分回测结果.csv")
         print("========共享资金池打分回测========")
         print(f"品种：{name_list}")

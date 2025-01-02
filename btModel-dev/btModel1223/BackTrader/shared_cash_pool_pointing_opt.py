@@ -334,14 +334,14 @@ class Shared_Cash_Pool_Pointing_Opt(bt.Strategy):
             if not name.startswith('_') and name not in skip_attr:
                 value=getattr(self.params,name)
                 param_info.append(f'{name}={value}')
-        Log.log(f"期初权益:{self.init_cash},{self.params.EMA26},{self.params.EMA12},{self.params.EMA9},{self.params.backtest_start_date},{self.params.backtest_end_date}",
-                dt=self.params.backtest_start_date)
+        # Log.log(f"期初权益:{self.init_cash},{self.params.EMA26},{self.params.EMA12},{self.params.EMA9},{self.params.backtest_start_date},{self.params.backtest_end_date}",
+        #         dt=self.params.backtest_start_date)
 
-        Log.log(f"期末权益:{self.total_value},{self.params.EMA26},{self.params.EMA12},{self.params.EMA9},{self.params.backtest_start_date},{self.params.backtest_end_date}",
-                dt=self.params.backtest_end_date)
+        # Log.log(f"期末权益:{self.total_value},{self.params.EMA26},{self.params.EMA12},{self.params.EMA9},{self.params.backtest_start_date},{self.params.backtest_end_date}",
+        #         dt=self.params.backtest_end_date)
 
-        print(self.profit)
-        print(self.profit_contribution)
+        #print(self.profit)
+        #print(self.profit_contribution)
         if self.total_trade_time!=0:#有交易
             win_rate=float(self.win_time)/self.total_trade_time
             #胜率
@@ -1059,18 +1059,18 @@ class Shared_Cash_Pool_Pointing_Opt(bt.Strategy):
         #计算品种贡献度，其实就是每个品种的利润/总利润(注意下正负号就行)
         total_profit=0
         for data in self.datas:
-            total_profit+=abs(self.profit[data.cnname])
+            total_profit+=abs(self.profit[data])
 
         if total_profit!=0:
             for data in self.datas:
-                if self.profit[data.cnname]>=0 and total_profit>0:
-                    self.profit_contribution[data.cnname]=self.profit[data.cnname]/total_profit
-                elif self.profit[data.cnname]>=0 and total_profit<0:
-                    self.profit_contribution[data.cnname]=abs(self.profit[data.cnname]/total_profit)
-                elif self.profit[data.cnname]<=0 and total_profit>0:
-                    self.profit_contribution[data.cnname]=(-1)*abs(self.profit[data.cnname]/total_profit)
-                elif self.profit[data.cnname]<=0 and total_profit<0:
-                    self.profit_contribution[data.cnname]=(-1)*abs(self.profit[data.cnname]/total_profit)
+                if self.profit[data]>=0 and total_profit>0:
+                    self.profit_contribution[data]=self.profit[data]/total_profit
+                elif self.profit[data]>=0 and total_profit<0:
+                    self.profit_contribution[data]=abs(self.profit[data]/total_profit)
+                elif self.profit[data]<=0 and total_profit>0:
+                    self.profit_contribution[data]=(-1)*abs(self.profit[data]/total_profit)
+                elif self.profit[data]<=0 and total_profit<0:
+                    self.profit_contribution[data]=(-1)*abs(self.profit[data]/total_profit)
 
 
     def cal_next_bar_is_last_trading_day(self,data):
@@ -1262,6 +1262,7 @@ class Shared_Cash_Pool_Pointing_Opt(bt.Strategy):
         QC_SUM=self.hulv_QC[0]+self.huxi_QC[0]+self.hunie_QC[0]+self.huxin_QC[0]+self.hutong_QC[0]+self.gongyegui_QC[0]
         ATR_SUM=self.hulv_QUAR1_ATR[0]+self.huxi_QUAR1_ATR[0]+self.hunie_QUAR1_ATR[0]+self.huxin_QUAR1_ATR[0]+self.hutong_QUAR1_ATR[0]+self.gongyegui_QUAR1_ATR[0]
         QGROUP_ATR=ATR_SUM/QC_SUM
+
         # Log.log(f"今天的HuNie_TR:{self.hunie_TR[0]}",dt=current_date)
         # Log.log(f"今天的HuXi_TR:{self.huxi_TR[0]}",dt=current_date)
         # Log.log(f"今天的Gongyegui_TR:{self.gongyegui_TR[0]}",dt=current_date)
@@ -1405,11 +1406,21 @@ class Shared_Cash_Pool_Pointing_Opt(bt.Strategy):
                 #Log.log(f"今天的{data.cnname}的KK:{KK}",dt=current_date)
 
                 if self.getposition(data).size==0 and DK==1:
-                    self.buy(data=data,size=1)
+                    fund=10000000
+                    margin_mult=self.get_margin_percent(data)
+                    margin_percent=margin_mult['margin']
+                    mult=margin_mult['mult']
+                    lots=(fund*0.04)/(data.close[0]*margin_percent*mult)
+                    self.buy(data=data,size=lots)
                     break
 
                 if self.getposition(data).size==0 and KK==1:
-                    self.sell(data=data,size=1)
+                    fund=10000000
+                    margin_mult=self.get_margin_percent(data)
+                    margin_percent=margin_mult['margin']
+                    mult=margin_mult['mult']
+                    lots=(fund*0.04)/(data.close[0]*margin_percent*mult)
+                    self.sell(data=data,size=lots)
                     break
 
 
