@@ -8,7 +8,7 @@ class MainController:
         """
         while True:
             print("*************************************************************************************")
-            pick=input("请选择交易大类：\n1.手动添加期货\n2.期货(商品篮子)\n3.期货（参数优化）\n")
+            pick=input("请选择交易大类：\n1.手动添加期货\n2.期货(商品篮子)\n3.期货（商品篮子参数优化）\n")
             if pick=='1':
                 #pass
                 wh_codes, names, start_date, end_date, period, margins, mults,CN_names = DataIO.input_futureInformation_single()

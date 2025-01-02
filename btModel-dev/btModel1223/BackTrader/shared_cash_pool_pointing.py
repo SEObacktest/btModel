@@ -21,6 +21,8 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
         ('ATR_period2',240),
         ('ATR_period3',120),
         ('SMA12',12),
+        ('A',23),
+        ('B',9),
     )
 
     def __init__(self):
@@ -1421,12 +1423,12 @@ class Shared_Cash_Pool_Pointing(bt.Strategy):
                 else:
                     KK_ENTER=0
 
-                if DK_ENTER==1 and self.hunie_SCORE[0]>22:
+                if DK_ENTER==1 and self.hunie_SCORE[0]>self.params.A:
                     DK=1
                 else:
                     DK=0
 
-                if KK_ENTER==1 and self.hunie_SCORE[0]<=8:
+                if KK_ENTER==1 and self.hunie_SCORE[0]<=self.params.B:
                     KK=1
                 else:
                     KK=0

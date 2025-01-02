@@ -18,6 +18,13 @@ class Shared_Cash_Pool_Pointing_Opt(bt.Strategy):
         ('EMA26',None),
         ('EMA12',None),
         ('EMA9',None),
+        ('NdayHigh',5),
+        ('ATR_period1',26),
+        ('ATR_period2',240),
+        ('ATR_period3',120),
+        ('SMA12',12),
+        ('A',22),
+        ('B',8),
     )
 
     def __init__(self):
@@ -79,6 +86,8 @@ class Shared_Cash_Pool_Pointing_Opt(bt.Strategy):
             self.margin[data]=0#这个来记录现在已经缴纳的保证金
             self.is_trade[data]=False#初始化是没有交易
             self.MACDtest[data]=0
+
+        self.index_and_MA_points()
     def prenext(self):
         #prenext模块，这个模块用来执行当“只有部分品种有数据”的时候的回测。
         #举个例子，A品种从1月1号开始有数据，B品种从3月1号开始有数据。
@@ -95,7 +104,8 @@ class Shared_Cash_Pool_Pointing_Opt(bt.Strategy):
                 self.close_all_position()
             else:
                 self.total_days+=1
-                self.test_MACD()
+                #self.test_MACD()
+                self.everyday_points()
             # for data in self.datas:#遍历每个品种
             #     #这一行目前有争议，逻辑不清，但是可以实现功能，先保留
             #     if current_date>=self.getdatabyname(data._name).datetime.date(0):
@@ -178,8 +188,9 @@ class Shared_Cash_Pool_Pointing_Opt(bt.Strategy):
             self.total_days+=1
             #同上
             #self.shared_cash_pointing()#执行策略
-            self.test_MACD()
+            #self.test_MACD()
             #同上
+            self.everyday_points()
             # for data in self.datas:
                 #if current_date>=self.getdatabyname(data._name).datetime.date(0):
                 #if current_date>=self.start_date[data]:
@@ -1105,3 +1116,287 @@ class Shared_Cash_Pool_Pointing_Opt(bt.Strategy):
                 elif self.getposition(data).size>0:
                     self.close(data=data)
                     self.sell(data=data,size=lots)
+
+
+
+#计算板块指数 均线分数
+    def index_and_MA_points(self):
+        #current_date = self.datetime.date(0)
+        for data1 in self.datas:
+            c=data1.close[0]
+            h=data1.high[0]
+            l=data1.low[0]
+
+            if data1.cnname=="沪镍加权":
+                self.hunie_TR=Indicators.TR(data1)
+                self.hunie_ATR=Indicators.ATR(data1,ATR_period1=self.params.ATR_period1,
+                    ATR_period2=self.params.ATR_period2,
+                    ATR_period3=self.params.ATR_period3)
+                self.hunie_QUAR1_ATR=Indicators.QUAR1_ATR(data1,ATR_period1=self.params.ATR_period1,
+                    ATR_period2=self.params.ATR_period2,
+                    ATR_period3=self.params.ATR_period3)
+                self.hunie_QC=Indicators.QC(data1,ATR_period1=self.params.ATR_period1,
+                    ATR_period2=self.params.ATR_period2,
+                    ATR_period3=self.params.ATR_period3)
+                self.hunie_SCORE=Indicators.SCORE(data1)
+                self.hunie_SMA=Indicators.CustomSMA(data1,period=self.params.ATR_period2)
+
+
+            elif data1.cnname=="工业硅加权":
+                self.gongyegui_TR=Indicators.TR(data1)
+                self.gongyegui_ATR=Indicators.ATR(data1,ATR_period1=self.params.ATR_period1,
+                    ATR_period2=self.params.ATR_period2,
+                    ATR_period3=self.params.ATR_period3)
+                self.gongyegui_QUAR1_ATR=Indicators.QUAR1_ATR(data1,ATR_period1=self.params.ATR_period1,
+                    ATR_period2=self.params.ATR_period2,
+                    ATR_period3=self.params.ATR_period3)
+                self.gongyegui_QC=Indicators.QC(data1,ATR_period1=self.params.ATR_period1,
+                    ATR_period2=self.params.ATR_period2,
+                    ATR_period3=self.params.ATR_period3)
+                self.gongyegui_SCORE=Indicators.SCORE(data1)
+                self.gongyegui_SMA=Indicators.CustomSMA(data1,period=self.params.ATR_period2)
+
+            elif data1.cnname=="沪锌加权":
+            #elif data.cnname=="沪银加权":
+                self.huxin_TR=Indicators.TR(data1)
+                self.huxin_ATR=Indicators.ATR(data1,ATR_period1=self.params.ATR_period1,
+                    ATR_period2=self.params.ATR_period2,
+                    ATR_period3=self.params.ATR_period3)
+                self.huxin_QUAR1_ATR=Indicators.QUAR1_ATR(data1,ATR_period1=self.params.ATR_period1,
+                    ATR_period2=self.params.ATR_period2,
+                    ATR_period3=self.params.ATR_period3)
+                self.huxin_QC=Indicators.QC(data1,ATR_period1=self.params.ATR_period1,
+                    ATR_period2=self.params.ATR_period2,
+                    ATR_period3=self.params.ATR_period3)
+                self.huxin_SCORE=Indicators.SCORE(data1)
+                self.huxin_SMA=Indicators.CustomSMA(data1,period=self.params.ATR_period2)
+
+            elif data1.cnname=="沪铝加权":
+                self.hulv_TR=Indicators.TR(data1)
+                self.hulv_ATR=Indicators.ATR(data1,ATR_period1=self.params.ATR_period1,
+                    ATR_period2=self.params.ATR_period2,
+                    ATR_period3=self.params.ATR_period3)
+                self.hulv_QUAR1_ATR=Indicators.QUAR1_ATR(data1,ATR_period1=self.params.ATR_period1,
+                    ATR_period2=self.params.ATR_period2,
+                    ATR_period3=self.params.ATR_period3)
+                self.hulv_QC=Indicators.QC(data1,ATR_period1=self.params.ATR_period1,
+                    ATR_period2=self.params.ATR_period2,
+                    ATR_period3=self.params.ATR_period3)
+                self.hulv_SCORE=Indicators.SCORE(data1)
+                self.hulv_SMA=Indicators.CustomSMA(data1,period=self.params.ATR_period2)
+
+            elif data1.cnname=="沪锡加权":
+                self.huxi_TR=Indicators.TR(data1)
+                self.huxi_ATR=Indicators.ATR(data1,ATR_period1=self.params.ATR_period1,
+                    ATR_period2=self.params.ATR_period2,
+                    ATR_period3=self.params.ATR_period3)
+                self.huxi_QUAR1_ATR=Indicators.QUAR1_ATR(data1,ATR_period1=self.params.ATR_period1,
+                    ATR_period2=self.params.ATR_period2,
+                    ATR_period3=self.params.ATR_period3)
+                self.huxi_QC=Indicators.QC(data1,ATR_period1=self.params.ATR_period1,
+                    ATR_period2=self.params.ATR_period2,
+                    ATR_period3=self.params.ATR_period3)
+                self.huxi_SCORE=Indicators.SCORE(data1)
+                self.huxi_SMA=Indicators.CustomSMA(data1,period=self.params.ATR_period2)
+
+            elif data1.cnname=="沪铜加权":
+                self.hutong_TR=Indicators.TR(data1)
+                self.hutong_ATR=Indicators.ATR(data1,ATR_period1=self.params.ATR_period1,
+                    ATR_period2=self.params.ATR_period2,
+                    ATR_period3=self.params.ATR_period3)
+                self.hutong_QUAR1_ATR=Indicators.QUAR1_ATR(data1,ATR_period1=self.params.ATR_period1,
+                    ATR_period2=self.params.ATR_period2,
+                    ATR_period3=self.params.ATR_period3)
+                self.hutong_QC=Indicators.QC(data1,ATR_period1=self.params.ATR_period1,
+                    ATR_period2=self.params.ATR_period2,
+                    ATR_period3=self.params.ATR_period3)
+                self.hutong_SCORE=Indicators.SCORE(data1)
+                self.hutong_SMA=Indicators.CustomSMA(data1,period=self.params.ATR_period2)
+
+        #self.QC_SUM=dict()
+        #self.QC_SUM=self.hulv_QC+self.huxi_QC+self.hunie_QC+self.huxin_QC+self.hutong_QC+self.gongyegui_QC
+        #self.QGROUP_ATR=dict()
+        #self.ATR_SUM=self.hulv_ATR+self.huxi_ATR+self.hunie_ATR+self.huxin_ATR+self.hutong_ATR+self.gongyegui_ATR
+        #self.QGROUP_ATR=(self.hulv_ATR+self.huxi_ATR+self.hunie_ATR+self.huxin_ATR+self.hutong_ATR+self.gongyegui_ATR)/self.QC_SUM
+        
+        '''self.VAR_TR=self.hunie_TR
+        self.VAR_ATR=self.hunie_ATR
+        self.QUAR_ATR=self.hunie_QUAR1_ATR
+        self.M=self.QUAR_ATR-self.QGROUP_ATR'''
+    #每天执行的策略
+    def everyday_points(self):
+            #上面三个字典，键是data，值是line
+        current_date = self.datetime.date(0)
+        QC_SUM=self.hulv_QC[0]+self.huxi_QC[0]+self.hunie_QC[0]+self.huxin_QC[0]+self.hutong_QC[0]+self.gongyegui_QC[0]
+        ATR_SUM=self.hulv_QUAR1_ATR[0]+self.huxi_QUAR1_ATR[0]+self.hunie_QUAR1_ATR[0]+self.huxin_QUAR1_ATR[0]+self.hutong_QUAR1_ATR[0]+self.gongyegui_QUAR1_ATR[0]
+        QGROUP_ATR=ATR_SUM/QC_SUM
+        # Log.log(f"今天的HuNie_TR:{self.hunie_TR[0]}",dt=current_date)
+        # Log.log(f"今天的HuXi_TR:{self.huxi_TR[0]}",dt=current_date)
+        # Log.log(f"今天的Gongyegui_TR:{self.gongyegui_TR[0]}",dt=current_date)
+        # Log.log(f"今天的Huxin_TR:{self.huxin_TR[0]}",dt=current_date)
+        # Log.log(f"今天的Hulv_TR:{self.hulv_TR[0]}",dt=current_date)
+
+        #Log.log(f"今天的HuNie_ATR:{self.get_indicator_value(self.hunie_ATR)}", dt=current_date)
+        #Log.log(f"今天的HuXi_ATR:{self.get_indicator_value(self.huxi_ATR)}", dt=current_date)
+        #Log.log(f"今天的Gongyegui_ATR:{self.get_indicator_value(self.gongyegui_ATR)}", dt=current_date)
+        #Log.log(f"今天的Huxin_ATR:{self.get_indicator_value(self.huxin_ATR)}", dt=current_date)
+        #Log.log(f"今天的Hulv_ATR:{self.get_indicator_value(self.hulv_ATR)}", dt=current_date)
+
+        #Log.log(f"今天的HuNie_SMA:{self.hunie_SMA[0]}",dt=current_date)
+        #Log.log(f"今天的HuXi_SMA:{self.huxi_SMA[0]}",dt=current_date)
+        #Log.log(f"今天的Gongyegui_SMA:{self.gongyegui_SMA[0]}",dt=current_date)
+        #Log.log(f"今天的Huxin_SMA:{self.huxin_SMA[0]}",dt=current_date)
+        #Log.log(f"今天的Hulv_SMA:{self.hulv_SMA[0]}",dt=current_date)
+        #Log.log(f"今天的Hutong_SMA:{self.hutong_SMA[0]}",dt=current_date)
+
+        #Log.log(f"今天的HuNie_QUAR1_ATR:{self.hunie_QUAR1_ATR[0]}",dt=current_date)
+        #Log.log(f"今天的Gongyegui_QUAR1_ATR:{self.gongyegui_QUAR1_ATR[0]}",dt=current_date)
+        #Log.log(f"今天的Huxin_QUAR1_ATR:{self.huxin_QUAR1_ATR[0]}",dt=current_date)
+        #Log.log(f"今天的Hulv_QUAR1_ATR:{self.hulv_QUAR1_ATR[0]}",dt=current_date)
+        #Log.log(f"今天的Huxi_QUAR1_ATR:{self.huxi_QUAR1_ATR[0]}",dt=current_date)
+        #Log.log(f"今天的Hutong_QUAR1_ATR:{self.hutong_QUAR1_ATR[0]}",dt=current_date)
+
+        #Log.log(f"今天的hunie_QC:{self.hunie_QC[0]}",dt=current_date)
+        #Log.log(f"今天的gongyegui_QC:{self.gongyegui_QC[0]}",dt=current_date)
+        #Log.log(f"今天的huxin_QC:{self.huxin_QC[0]}",dt=current_date)
+        #Log.log(f"今天的hulv_QC:{self.hulv_QC[0]}",dt=current_date)
+        #Log.log(f"今天的huxi_QC:{self.huxi_QC[0]}",dt=current_date)
+        #Log.log(f"今天的hutong_QC:{self.hutong_QC[0]}",dt=current_date)
+
+        #Log.log(f"今天的hunie_SCORE:{self.hunie_SCORE[0]}",dt=current_date)
+        #Log.log(f"今天的gongyegui_SCORE:{self.gongyegui_SCORE[0]}",dt=current_date)
+        #Log.log(f"今天的huxin_SCORE:{self.huxin_SCORE[0]}",dt=current_date)
+        #Log.log(f"今天的hulv_SCORE:{self.hulv_SCORE[0]}",dt=current_date)
+        #Log.log(f"今天的huxi_SCORE:{self.huxi_SCORE[0]}",dt=current_date)
+        #Log.log(f"今天的hutong_SCORE:{self.hutong_SCORE[0]}",dt=current_date)
+
+        #Log.log(f"今天的QC_SUM:{QC_SUM}",dt=current_date)
+        #Log.log(f"今天的ATR_SUM:{ATR_SUM}",dt=current_date)    
+        #Log.log(f"今天的QGROUP_ATR{QGROUP_ATR}",dt=current_date)
+
+        M1=self.hunie_QUAR1_ATR[0]-QGROUP_ATR
+        M2=self.gongyegui_QUAR1_ATR[0]-QGROUP_ATR
+        M3=self.huxin_QUAR1_ATR[0]-QGROUP_ATR
+        M4=self.hulv_QUAR1_ATR[0]-QGROUP_ATR
+        M5=self.huxi_QUAR1_ATR[0]-QGROUP_ATR
+        M6=self.hutong_QUAR1_ATR[0]-QGROUP_ATR
+        #M1-M6都是数
+        MAX_M=max(M1,M2,M3,M4,M5,M6)
+
+        if MAX_M==M2 and M2==M1:
+            J1=1
+        else:
+            J1=0
+        
+        if MAX_M==M3 and M3==M1:
+            J2=2
+        else:
+            J2=0
+
+        if MAX_M==M4 and M4==M1:
+            J3=3
+        else:
+            J3=0
+
+        if MAX_M==M5 and M5==M1:
+            J4=4
+        else:
+            J4=0
+
+        if MAX_M==M6 and M6==M1:
+            J5=5
+        else:
+            J5=0
+        
+        JJ=J1+J2+J3+J4+J5
+
+        for data in self.datas:
+
+
+
+            if data.cnname!="沪镍加权":
+                CHOOSE=0
+                continue
+
+            else:
+                M=self.hunie_QUAR1_ATR[0]-QGROUP_ATR
+                #Log.log(f"今天的{data.cnname}的M:{M}",dt=current_date)
+                if M==MAX_M:
+                    CHOOSE=1
+                else:
+                    CHOOSE=0
+                    
+                MAX_SCORES=max(self.hunie_SCORE[0],self.gongyegui_SCORE[0],
+                            self.huxin_SCORE[0],self.hulv_SCORE[0],
+                            self.huxi_SCORE[0],self.hutong_SCORE[0])
+                
+                MIN_SCORES=min(self.hunie_SCORE[0],self.gongyegui_SCORE[0],
+                            self.huxin_SCORE[0],self.hulv_SCORE[0],
+                            self.huxi_SCORE[0],self.hutong_SCORE[0])
+
+                if CHOOSE==1 and JJ==0:
+                    JD=777
+                else:
+                    JD=666
+
+                if CHOOSE==1 and JD==666 and MAX_SCORES==self.hunie_SCORE[0]:
+                    DK_E1=1
+                else:
+                    DK_E1=0
+
+                if CHOOSE==1 and JD==666 and MIN_SCORES==self.hunie_SCORE[0]:
+                    KK_E1=1
+                else:
+                    KK_E1=0
+                
+                if JD==777 or DK_E1==1:
+                    DK_ENTER=1
+                else:
+                    DK_ENTER=0
+
+                if JD==777 or KK_E1==1:
+                    KK_ENTER=1
+                else:
+                    KK_ENTER=0
+
+                if DK_ENTER==1 and self.hunie_SCORE[0]>self.parms.A:
+                    DK=1
+                else:
+                    DK=0
+
+                if KK_ENTER==1 and self.hunie_SCORE[0]<=self.params.B:
+                    KK=1
+                else:
+                    KK=0
+
+                #Log.log(f"今天的{data.cnname}的DK:{DK}",dt=current_date)
+                #Log.log(f"今天的{data.cnname}的KK:{KK}",dt=current_date)
+
+                if self.getposition(data).size==0 and DK==1:
+                    self.buy(data=data,size=1)
+                    break
+
+                if self.getposition(data).size==0 and KK==1:
+                    self.sell(data=data,size=1)
+                    break
+
+
+                if self.hunie_SCORE[0]>22 or CHOOSE==0:
+                    self.close(data=data)
+                    break
+
+                if self.hunie_SCORE[0]<=8 or CHOOSE==0:
+                    self.close(data=data)
+                    break
+
+    def get_indicator_value(self, indicator, default=0.0):
+        try:
+            # 检查指标是否已经准备好数据
+            if len(indicator) > 0:
+                value = indicator[0]
+                # 检查值是否有效
+                if not math.isnan(value) and not math.isinf(value):
+                    return value
+            return default
+        except Exception as e:
+            return default
