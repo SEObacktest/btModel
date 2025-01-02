@@ -15,9 +15,9 @@ class Shared_Cash_Pool_Pointing_Opt(bt.Strategy):
     params = (
         ('backtest_start_date', None),
         ('backtest_end_date', None),
-        ('EMA26',None),
-        ('EMA12',None),
-        ('EMA9',None),
+        # ('EMA26',None),
+        # ('EMA12',None),
+        # ('EMA9',None),
         ('NdayHigh',5),
         ('ATR_period1',26),
         ('ATR_period2',240),
@@ -30,6 +30,11 @@ class Shared_Cash_Pool_Pointing_Opt(bt.Strategy):
     def __init__(self):
         self.connection = get_engine()
         self._cache = None  # 初始化缓存为None
+        if not self.datas:
+            raise ValueError("没有数据被加载到策略中")
+        
+
+
         #各种打分用的指标
         columns = ['时间', '合约名', '信号', '单价', '手数', '总价', '手续费', '可用资金','开仓均价','品种浮盈','权益','当日收盘','已缴纳保证金','平仓盈亏']
         columns2=['年化单利','胜率','盈亏比','胜率盈亏','总交易次数','盈利次数','亏损次数','参数组']
@@ -43,6 +48,7 @@ class Shared_Cash_Pool_Pointing_Opt(bt.Strategy):
         self.cash=100000000#初始资金
         self.DIFF=dict()#MACD策略当中的DIFF指标
         self.MACD=dict()#MACD策略当中的MACD指标
+        self.NDayHigh=dict()#存放N日内最高价
         self.notify_flag=1#控制订单打印的BOOL变量
         self.profit=dict()#分品类保存利润的字典
         self.profit_contribution=dict()#分品类保存利润贡献度的字典
@@ -61,33 +67,59 @@ class Shared_Cash_Pool_Pointing_Opt(bt.Strategy):
         self.is_trade=dict()
         #标记每天每个品种是否有交易
         self.test=1
-        self.MACDtest=dict()
+        self.MACDtest={}
         self.total_trade_time=0#总交易次数
         self.win_time=0#盈利的次数
         self.lose_time=0#亏损的次数
         self.total_profit=0#总盈利
         self.total_loss=0#总亏损
         self.total_days=0#总天数
+        self.TR=dict()
+        self.ATR=dict()
+        self.QUAR1_ATR=dict()
+        self.QC=dict()
+        self.SMA12=dict()
+        self.VOLCROSS=dict()
+        self.SCORE=dict()
+        #self.VAR_TR=dict()
+        #self.VAR_ATR=dict()
+        #self.QUAR_ATR=dict()
+        #self.M=dict()
         for data in self.datas:#每个品类都需要初始化一次
+            self.MACDtest[data]=0
             data.cnname=self.get_margin_percent(data)['future_name']
             c=data.close
-            self.profit[data.cnname]=0#各品类初始化为0
-            self.profit_contribution[data.cnname]=0
+            h=data.high
+            self.profit[data]=0#各品类初始化为0
+            self.profit_contribution[data]=0
             self.first_date[data]=None
-            self.EMA26[data]=Indicators.CustomEMA(c,period=self.params.EMA26)
-            self.EMA12[data]=Indicators.CustomEMA(c,period=self.params.EMA12)
-            self.DIFF[data]=self.EMA12[data]-self.EMA26[data]
-            self.DEA[data] =Indicators.CustomEMA(self.DIFF[data], period=self.params.EMA9)
-            self.MACD[data]=2*(self.DIFF[data]-self.DEA[data])
+            #self.EMA26[data]=Indicators.CustomEMA(c,period=self.params.EMA26)
+            #self.EMA12[data]=Indicators.CustomEMA(c,period=self.params.EMA12)
+            #self.DIFF[data]=self.EMA12[data]-self.EMA26[data]
+            #self.DEA[data] =Indicators.CustomEMA(self.DIFF[data], period=self.params.EMA9)
+            #self.MACD[data]=2*(self.DIFF[data]-self.DEA[data])
+            #self.NDayHigh[data]=Indicators.NDayHigh(h,period=5)
+            #self.TR[data]=Indicators.TR()
+            #self.ATR[data]=Indicators.ATR(ATR_period1=self.params.ATR_period1,
+                                          #ATR_period2=self.params.ATR_period2,
+                                          #ATR_period3=self.params.ATR_period3)
+            #self.QUAR1_ATR[data]=Indicators.QUAR1_ATR(ATR_period1=self.params.ATR_period1,
+                                          #ATR_period2=self.params.ATR_period2,
+                                          #ATR_period3=self.params.ATR_period3)
+            #self.QC[data]=Indicators.QC(ATR_period1=self.params.ATR_period1,
+                                          #ATR_period2=self.params.ATR_period2,
+                                          #ATR_period3=self.params.ATR_period3)
+            #self.SMA12[data]=Indicators.CustomSMA(c,period=self.params.SMA12)
+            #self.VOLCROSS[data]=Indicators.VOL_CROSS()
+            #self.SCORE[data]=Indicators.SCORE()
             self.order_list[data]=[0]
             self.paper_profit[data]=0
             self.log[data]=0
             self.average_open_cost[data]=0
             self.margin[data]=0#这个来记录现在已经缴纳的保证金
             self.is_trade[data]=False#初始化是没有交易
-            self.MACDtest[data]=0
-
         self.index_and_MA_points()
+
     def prenext(self):
         #prenext模块，这个模块用来执行当“只有部分品种有数据”的时候的回测。
         #举个例子，A品种从1月1号开始有数据，B品种从3月1号开始有数据。
@@ -1359,7 +1391,7 @@ class Shared_Cash_Pool_Pointing_Opt(bt.Strategy):
                 else:
                     KK_ENTER=0
 
-                if DK_ENTER==1 and self.hunie_SCORE[0]>self.parms.A:
+                if DK_ENTER==1 and self.hunie_SCORE[0]>self.params.A:
                     DK=1
                 else:
                     DK=0

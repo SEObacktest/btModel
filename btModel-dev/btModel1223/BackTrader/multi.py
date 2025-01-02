@@ -24,20 +24,19 @@ def setup_cerebro(code_list, name_list, per, margins, mults):
     return cerebro
 
 def run(params):
-    code_list, name_list, start_full, end_full, per, margins, mults, ema26,ema12,ema9 = params
+    #code_list, name_list, start_full, end_full, per, margins, mults, ema26,ema12,ema9 = params
+    code_list, name_list, start_full, end_full, per, margins, mults, parmas_A,parmas_B = params
     cerebro = setup_cerebro(code_list, name_list, per, margins, mults)
     # cerebro=bt.Cerebro(stdstats=False)
     cerebro.broker.set_coc(True)
     BackTestSetup.set_cerebro(cerebro=cerebro, opt_judge=False) 
-    kwags = {'EMA26':params[0],
-             'EMA12':params[1],
-             'EMA9':params[2]}
+    # kwags = {'EMA26':params[0],
+    #          'EMA12':params[1],
+    #          'EMA9':params[2]}
     cerebro.addstrategy(Shared_Cash_Pool_Pointing_Opt,
                         backtest_start_date=start_full,
                         backtest_end_date=end_full,
-                        EMA26=ema26,
-                        EMA12=ema12,
-                        EMA9=ema9
+                        A=parmas_A,
+                        B=parmas_B,
                         )
     cerebro.run(maxcpus=None)
-    return [ema26]

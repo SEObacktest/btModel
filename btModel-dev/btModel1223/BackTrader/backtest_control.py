@@ -88,16 +88,16 @@ class BackTest:
         EMA26_list = range(10, 20, 5)  # 接下来几行是预备多线并发的参数优化，可以忽略
         EMA12_list=range(8,18,5)
         EMA9_list=range(5,15,5)
-        A_list=range(1,24,1)
-        B_list=range(1,24,1)
+        A_list=range(22,24,1)
+        B_list=range(22,24,1)
 
         start_full = DataGet.get_str_to_datetime(start_date)
         end_full = DataGet.get_str_to_datetime(end_date)  # datetime.datetime格式
         # params_combinations = [(code_list, name_list, start_full, end_full, period, margins, mults, ema26, ema12, ema9)
         #                        for ema26, ema12, ema9 in product(EMA26_list, EMA12_list, EMA9_list)]
         
-        params_combinations = [(code_list, name_list, start_full, end_full, period, margins, mults, A,B)
-                               for A, B, in product(A_list,B_list)]
+        params_combinations = [(code_list, name_list, start_full, end_full, period, margins, mults, params_A,params_B)
+                               for params_A, params_B, in product(A_list,B_list)]
         # params = [(code_list, name_list, start_full, end_full, period, margins, mults, ema26)
         #                        for ema26 in product(EMA26_list)]
         #optimal_cores=DataGet.get_optimal_cpu_count()
